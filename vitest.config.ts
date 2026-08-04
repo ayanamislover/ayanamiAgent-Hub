@@ -35,6 +35,13 @@ export default defineConfig({
     // reporter's side. Which cases failed changed from run to run, so this is a margin problem.
     testTimeout: 90_000,
     hookTimeout: 90_000,
+    // With the timeouts raised, every one of the 1249 cases passed on the runner and the job still
+    // failed -- on `[vitest-worker]: Timeout calling "onTaskUpdate"`, a worker unable to reach the
+    // reporter. Much of this suite is synchronous better-sqlite3 work that holds a thread outright,
+    // and four of those on a four-core runner starve the main thread that answers them. Capping
+    // concurrency there trades wall time for a result that means something; a developer machine
+    // keeps the default.
+    maxWorkers: process.env.CI ? 2 : undefined,
     env: {
       TMP: canonicalTmpdir,
       TEMP: canonicalTmpdir,
