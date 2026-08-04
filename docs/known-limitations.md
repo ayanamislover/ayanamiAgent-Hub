@@ -143,12 +143,33 @@ None of this is in a published contract; it was measured against codex-cli 0.145
 release that changes when rollouts are written, or what `thread/resume` accepts, can break Bridge
 launch without any change on this side.
 
+You can re-measure it yourself, on whatever version you have:
+
+```bash
+crossagent compatibility probe codex --project .
+crossagent compatibility probe claude
+```
+
+It starts a real app-server, walks the thread lifecycle and the readback surfaces, and writes the
+result to `~/.crossagent/compatibility/<client>.json`, which `crossagent doctor` then reports. It
+never starts a turn unless you pass `--allow-model-turn`, because confirming a steer costs a model
+call. A method that answers `-32601` is reported `unsupported`; anything else that fails is
+`inconclusive`, because a refusal for a state reason says nothing about whether the method exists —
+`thread/resume` on a thread with no rollout yet is exactly that case, and reporting it as missing
+would be the same guesswork this replaces.
+
 Codex 只有在线程至少含一个 item 之后才写 rollout，在那之前 `thread/resume` 一律返回 `-32600 no
 rollout found`。而 Bridge 必须在启动中途重启 app-server 来装载初始 MODEL_MCP ticket（ticket 绑定
 thread id，因此只能在 thread 创建之后签发），重启后再 resume 刚创建的线程。所以 Bridge 会在重启前注入
 一行可见的锚点 `CrossAgent Hub is connected to this thread.`——`thread/read` 不会持久化线程，空 item
 列表会被拒绝，没有隐形的替代做法。以上都不是公开契约，只是在 codex-cli 0.145.0 上实测所得；Codex 未来
 若改变 rollout 的写入时机或 `thread/resume` 的接受条件，Bridge 启动可能在本项目毫无改动的情况下失效。
+
+上面那两条命令可以在你自己的版本上重测一遍：它会真正拉起 app-server，走一遍线程生命周期与回读面，把
+结果写进 `~/.crossagent/compatibility/<client>.json`，`crossagent doctor` 会带上它。除非显式加
+`--allow-model-turn`，否则不会发起任何 turn，因为确认 steer 需要真调一次模型。只有回 `-32601` 的方法
+才记为 `unsupported`，其余失败一律记 `inconclusive`——因状态原因被拒绝，并不能说明方法不存在，没有
+rollout 时的 `thread/resume` 正是这种情况，把它判成缺失就又变回了这套机制要取代的猜测。
 
 ---
 

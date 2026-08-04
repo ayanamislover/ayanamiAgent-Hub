@@ -47,7 +47,8 @@ review-required task cannot reach `DONE` while a blocking finding is open.
 
 **Capability is probed, not inferred.** The Agents page shows the transport and capabilities
 actually probed for each session rather than guessing them from a client version string, so an agent
-whose CLI dropped a feature shows up as degraded instead of silently failing.
+whose CLI dropped a feature shows up as degraded instead of silently failing. You can run the same
+measurement yourself with `crossagent compatibility probe codex`.
 
 ## Try it without two agents
 

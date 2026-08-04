@@ -5,6 +5,7 @@ import { Command } from "commander";
 import open from "open";
 import { HubClient } from "@crossagent/client";
 import { CodexBridge, CodexSessionTicketRuntime } from "@crossagent/codex-bridge";
+import { probeClaude, probeCodex } from "./compatibility.js";
 import { exportDiagnostics, collectDiagnostics } from "./diagnostics.js";
 import { installClaudeChannel, installLifecycleHooks } from "./installers.js";
 import {
@@ -982,6 +983,37 @@ review
     print({
       removed: cleanupReview(id, options.projectId, projectRoot(resolve(options.project))),
     });
+  });
+
+// Neither Adapter's host CLI announces what it can still do, so the answer has to be measured and
+// dated rather than inferred from a version string. The result is written next to the other local
+// state and is what `doctor` reports.
+const compatibility = program.command("compatibility");
+compatibility
+  .command("probe")
+  .argument("<client>", "codex or claude")
+  .option("--project <path>", "project root the probe starts a thread in", ".")
+  .option("--command <path>", "the client executable to probe")
+  .option(
+    "--allow-model-turn",
+    "also probe the steer readback, which starts a turn and calls the model",
+  )
+  .action(async (client: string, options) => {
+    if (client === "codex") {
+      print(
+        await probeCodex({
+          cwd: resolve(options.project),
+          command: options.command,
+          allowModelTurn: Boolean(options.allowModelTurn),
+        }),
+      );
+      return;
+    }
+    if (client === "claude") {
+      print(probeClaude({ command: options.command }));
+      return;
+    }
+    throw new Error(`Unknown client: ${client}. Use codex or claude.`);
   });
 
 const diagnostics = program.command("diagnostics");

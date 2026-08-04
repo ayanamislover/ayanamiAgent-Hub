@@ -43,7 +43,8 @@ _Communications——优先级决定一条消息如何抵达正在忙的 agent�
 需要 review 的任务就到不了 `DONE`。
 
 **能力是探测出来的，不是推断的。** Agents 页面展示的是每个会话实际探测到的传输方式与能力，而不是从
-客户端版本号猜出来的，所以某个 agent 的 CLI 掉了某项功能时会显示为降级，而不是静默失效。
+客户端版本号猜出来的，所以某个 agent 的 CLI 掉了某项功能时会显示为降级，而不是静默失效。同一份测量你
+也可以自己跑：`crossagent compatibility probe codex`。
 
 ## 没有两个 Agent 也能先看看
 

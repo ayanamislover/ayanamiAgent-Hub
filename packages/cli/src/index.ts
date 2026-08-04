@@ -6,6 +6,7 @@ export * from "./managed-bridge-ipc.js";
 export * from "./managed-bridge-runtime.js";
 export * from "./windows-managed-bridge-supervisor.js";
 export * from "./windows-owner-private-acl.js";
+export * from "./compatibility.js";
 export * from "./diagnostics.js";
 export * from "./installers.js";
 export * from "./paths.js";

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { platform, release } from "node:os";
 import { dirname, resolve } from "node:path";
 import { strToU8, zipSync } from "fflate";
+import { readCompatibilityReport } from "./compatibility.js";
 import { defaultBaseUrl, pidPath, tokenPath } from "./paths.js";
 import { health, readPidRecord } from "./process-manager.js";
 
@@ -36,6 +37,12 @@ export async function collectDiagnostics(): Promise<Record<string, unknown>> {
     paths: {
       tokenPresent: existsSync(tokenPath),
       pidPresent: existsSync(pidPath),
+    },
+    // Whatever `crossagent compatibility probe` last measured, or null. A stale entry is still
+    // useful in a bug report because it carries the date it was taken.
+    compatibility: {
+      codex: readCompatibilityReport("codex"),
+      claude: readCompatibilityReport("claude"),
     },
     environment: {
       CROSSAGENT_URL: process.env.CROSSAGENT_URL ?? null,

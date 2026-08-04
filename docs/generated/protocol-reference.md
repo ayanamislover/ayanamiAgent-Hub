@@ -130,7 +130,7 @@ per-route and are described in [the protocol](../protocol.md).
 | GET | `/ws` | `apps\hub\src\websocket\project-socket.ts` |
 | GET | `/ws/terminal` | `apps\hub\src\websocket\terminal-socket.ts` |
 
-## Command line (28)
+## Command line (30)
 
 The `crossagent` command tree as Commander registers it in `packages/cli/src/bin.ts`.
 
@@ -142,6 +142,8 @@ The `crossagent` command tree as Commander registers it in `packages/cli/src/bin
 | `crossagent claude-channel` | — |
 | `crossagent claude-channel install` | `[path]` |
 | `crossagent codex` | — |
+| `crossagent compatibility` | — |
+| `crossagent compatibility probe` | `<client>` |
 | `crossagent diagnostics` | — |
 | `crossagent diagnostics export` | `[path]` |
 | `crossagent doctor` | — |
