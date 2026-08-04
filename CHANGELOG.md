@@ -11,6 +11,12 @@ documentation is bilingual: [README](./README.md) · [简体中文](./README.zh-
 
 ## [Unreleased]
 
+### Fixed
+
+- `tsconfig.base.json` no longer sets `baseUrl`. TypeScript 6 reports it as deprecated and 7 removes
+  it, which failed the typecheck on the TypeScript 6 upgrade; `paths` has not needed it since
+  TypeScript 5.0 as long as the entries are explicitly relative.
+
 ## [0.1.0-alpha.1] - 2026-08-04
 
 The first tagged release. The public repository starts from a clean snapshot, so this section holds
