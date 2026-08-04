@@ -57,9 +57,20 @@ jobs:
       - name: Test
         run: pnpm test
 
-# The Dashboard end-to-end suite is deliberately not a job here. Its fixture cannot seed a clean
-# data directory: it registers sessions claiming to be real Codex and Claude adapters, and the Hub
-# correctly refuses that from the compatibility credential. It only ever appeared to pass because
-# output/playwright/e2e-data survives between runs. Wiring in a job that can only be red would train
-# everyone to ignore CI, so the gap is recorded in docs/known-limitations.md instead, and the job
-# comes back when the fixture drives the real enrollment flow.
+      # Seeds a clean data directory by enrolling both Adapters through the real ticket flow, so it
+      # depends on nothing left over from an earlier run. Needs the build above: the suite starts the
+      # Hub from apps/hub/dist and serves apps/dashboard/dist.
+      - name: Install Playwright browsers
+        run: pnpm --filter @crossagent/dashboard exec playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: pnpm test:e2e
+
+      - name: Upload end-to-end failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: output/playwright/test-results
+          retention-days: 7
+          if-no-files-found: ignore

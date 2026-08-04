@@ -1,6 +1,30 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { FullConfig } from "@playwright/test";
+import { SECONDARY_PROJECT_NAME, fixtureProject, resetFixtureProjects } from "./fixture-paths.js";
+
+/**
+ * The exact capability bundle each Adapter client must present, mirroring
+ * SESSION_TICKET_PURPOSES_BY_CLIENT. Activation rejects a bundle that is missing a purpose or
+ * carries a spare one, so this list is the contract, not a convenience.
+ */
+const ADAPTERS = [
+  {
+    agentId: "codex",
+    client: "codex-app-server",
+    deliveryMode: "app_server_push",
+    purposes: ["CONTROL", "MODEL_MCP", "INJECTOR"],
+    capabilities: ["turn/steer", "thread/inject_items", "turn/start"],
+  },
+  {
+    agentId: "claude",
+    client: "claude-channel",
+    deliveryMode: "native_channel",
+    purposes: ["CONTROL"],
+    capabilities: ["claude/channel", "ack_event", "post_reply"],
+  },
+] as const;
 
 async function post(baseURL: string, token: string, path: string, body: unknown) {
   const response = await fetch(`${baseURL}${path}`, {
@@ -18,36 +42,51 @@ async function post(baseURL: string, token: string, path: string, body: unknown)
 export default async function globalSetup(config: FullConfig) {
   const root = resolve(import.meta.dirname, "../../..");
   const dataDir = resolve(root, "output", "playwright", "e2e-data");
-  const fixture = resolve(root, "output", "playwright", "fixture-project");
-  mkdirSync(fixture, { recursive: true });
-  // Two credentials, because the Hub deliberately splits them and no single one can do all of this.
+  resetFixtureProjects();
+  const fixture = fixtureProject("control-plane");
+  // Four credentials, because the Hub deliberately splits them and no single one can do all of this.
   //
-  // `dashboard-token` is the Dashboard's own credential (`hub:dashboard`) and drives everything the
-  // Dashboard itself can do: joining the project, and creating objectives, milestones, tasks,
-  // messages and write intents.
+  // `dashboard-token` (`hub:dashboard`) drives everything the Dashboard itself can do: joining the
+  // project, reserving an Adapter launch, and creating objectives, milestones, tasks, messages and
+  // write intents.
   //
-  // `token` is the compatibility bearer, crd_local_agent. It is the only principal allowed to
-  // create the fake-client sessions this fixture needs -- see assertCanCreateAdapterSession, which
-  // admits prn_local_agent alone precisely so a fixture cannot stand up a session claiming to be a
-  // real Codex or Claude Adapter. It carries `project:select` and nothing else, so it cannot be
-  // used for the calls above.
+  // `agent-<client>-token` carries `session-ticket:offer` and is what actually enrolls a session:
+  // it offers the CONTROL and MODEL_MCP tickets. `inject-codex-token` offers the INJECTOR ticket,
+  // which no other static credential may offer.
   //
-  // This used to read `token` for everything, which only worked against a data directory left over
-  // from an earlier run. Against a fresh one -- all CI ever has -- setup died on the first call
-  // with HTTP 403 "Credential does not have an allowed scope".
-  const dashboardTokenFile = resolve(dataDir, "dashboard-token");
-  const compatibilityTokenFile = resolve(dataDir, "token");
-  for (
-    let attempt = 0;
-    attempt < 50 && !(existsSync(dashboardTokenFile) && existsSync(compatibilityTokenFile));
-    attempt += 1
-  ) {
+  // This used to register sessions with the compatibility bearer instead, which meant the fixture
+  // was standing up sessions that merely claimed to be Codex and Claude. The Hub closed that door
+  // -- assertCanCreateAdapterSession now admits prn_local_agent only for fake-client sessions in a
+  // `manual:` or `local:` Agent namespace -- so the fixture now does what a real Adapter does.
+  const credentialFiles = {
+    dashboard: resolve(dataDir, "dashboard-token"),
+    codexAgent: resolve(dataDir, "agent-codex-token"),
+    claudeAgent: resolve(dataDir, "agent-claude-token"),
+    codexInjector: resolve(dataDir, "inject-codex-token"),
+  };
+  const paths = Object.values(credentialFiles);
+  for (let attempt = 0; attempt < 50 && !paths.every((path) => existsSync(path)); attempt += 1) {
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
   }
-  const token = readFileSync(dashboardTokenFile, "utf8").trim();
-  const sessionToken = readFileSync(compatibilityTokenFile, "utf8").trim();
+  const read = (path: string) => readFileSync(path, "utf8").trim();
+  const token = read(credentialFiles.dashboard);
+  const offerTokens = {
+    codex: {
+      agent: read(credentialFiles.codexAgent),
+      injector: read(credentialFiles.codexInjector),
+    },
+    claude: { agent: read(credentialFiles.claudeAgent), injector: "" },
+  };
   process.env.CROSSAGENT_E2E_TOKEN = token;
   const baseURL = String(config.projects[0]?.use.baseURL ?? "http://127.0.0.1:4390");
+  // The Dashboard defaults to the most recently joined project, so the secondary project the
+  // navigation case needs is created first and never touched again. Created inside that case
+  // instead, it would become the default for every case that ran after it.
+  await post(baseURL, token, "/api/projects/join", {
+    cwd: fixtureProject("navigation"),
+    name: SECONDARY_PROJECT_NAME,
+    allowCreate: true,
+  });
   const joined = await post(baseURL, token, "/api/projects/join", {
     cwd: fixture,
     name: "Ayanami Control Plane",
@@ -80,33 +119,102 @@ export default async function globalSetup(config: FullConfig) {
       }),
     );
   }
-  const register = (agentId: string) =>
-    post(baseURL, sessionToken, `/api/projects/${projectId}/sessions`, {
+  // Enroll each Adapter the way the Bridge does: reserve the launch, offer the client's exact
+  // ticket bundle against that reservation, then register the session authenticated by the raw
+  // CONTROL token. The Hub only ever sees each ticket's SHA-256; the raw token stays here.
+  const enroll = async (adapter: (typeof ADAPTERS)[number]) => {
+    const { agentId, client, deliveryMode, purposes, capabilities } = adapter;
+    const externalSessionId = `e2e-external-${agentId}`;
+    const reservation = await post(
+      baseURL,
+      token,
+      `/api/projects/${projectId}/session-launch-reservations`,
+      {
+        agentId,
+        client,
+        deliveryMode,
+        externalSessionId,
+        runId: `run-e2e-${agentId}`,
+        idempotencyKey: `e2e-reservation-${agentId}`,
+      },
+    );
+    const bundleId = `stb_e2e_${agentId}`;
+    const rawTickets: Record<string, string> = {};
+    for (const purpose of purposes) {
+      const raw = randomBytes(32).toString("base64url");
+      rawTickets[purpose] = raw;
+      const offerer =
+        purpose === "INJECTOR" ? offerTokens[agentId].injector : offerTokens[agentId].agent;
+      await post(baseURL, offerer, `/api/projects/${projectId}/session-ticket-offers`, {
+        bundle_id: bundleId,
+        purpose,
+        token_sha256: createHash("sha256").update(raw).digest("hex"),
+        adapter_client: agentId,
+        agent_id: agentId,
+        session_client: client,
+        role: "primary",
+        transport: "websocket",
+        delivery_mode: deliveryMode,
+        external_session_id: externalSessionId,
+        external_thread_id: null,
+        run_id: reservation.runId,
+        activation_mode: "MANAGED_RESERVATION",
+        expected_lineage_id: reservation.lineageId,
+        expected_head_session_id: reservation.expectedHeadSessionId,
+        launch_reservation_id: reservation.id,
+        idempotency_key: `e2e-offer-${agentId}-${purpose}`,
+      });
+    }
+    const control = rawTickets.CONTROL!;
+    const receipt = await post(baseURL, control, `/api/projects/${projectId}/sessions`, {
       agentId,
       role: "primary",
-      client: agentId === "codex" ? "codex-app-server" : "claude-channel",
+      client,
       transport: "websocket",
-      deliveryMode: agentId === "codex" ? "app_server_push" : "native_channel",
+      deliveryMode,
+      externalSessionId,
       host: "e2e",
       cwd: fixture,
-      capabilities:
-        agentId === "codex"
-          ? ["turn/steer", "thread/inject_items", "turn/start"]
-          : ["claude/channel", "ack_event", "post_reply"],
+      capabilities,
+      expectedHeadSessionId: reservation.expectedHeadSessionId,
+      launcherRunId: reservation.runId,
+      launchGeneration: reservation.generation,
+      ticket_bundle_id: bundleId,
       idempotencyKey: `e2e-session-${agentId}`,
     });
-  const [codex, claude] = await Promise.all([register("codex"), register("claude")]);
-  const heartbeatSequence = Math.floor(Date.now() / 1000);
-  await Promise.all(
-    [codex, claude].map((session, index) =>
-      post(baseURL, sessionToken, `/api/sessions/${session.id}/heartbeat`, {
-        sequence: heartbeatSequence + index,
-        workState: "IDLE",
-        activeFiles: [],
-        queueDepth: 0,
-      }),
-    ),
-  );
+    return { session: receipt.session, control };
+  };
+  const [codexAdapter, claudeAdapter] = [await enroll(ADAPTERS[0]), await enroll(ADAPTERS[1])];
+  const codex = codexAdapter.session;
+  const claude = claudeAdapter.session;
+  // Anything attributed to an Agent must be authored by that Agent's own CONTROL ticket. The
+  // Dashboard credential is refused outright ("Dashboard messages cannot claim an Agent session"),
+  // which is the whole point: authorship is not a field the caller gets to fill in.
+  const codexControl = codexAdapter.control;
+  const claudeControl = claudeAdapter.control;
+  // Presence is derived from the transport, and a session that stops beating is OFFLINE after
+  // twenty seconds. A single heartbeat here left both Agents offline before the second browser case
+  // even started, so every assertion about a live session failed. Beat for as long as the run
+  // lasts, which is what an attached Adapter does.
+  const enrolled = [codexAdapter, claudeAdapter];
+  let heartbeatSequence = Math.floor(Date.now() / 1000);
+  const beat = () =>
+    Promise.all(
+      enrolled.map((adapter) =>
+        post(baseURL, adapter.control, `/api/sessions/${adapter.session.id}/heartbeat`, {
+          sequence: heartbeatSequence,
+          workState: "IDLE",
+          activeFiles: [],
+          queueDepth: 0,
+        }),
+      ),
+    );
+  await beat();
+  const heartbeat = setInterval(() => {
+    heartbeatSequence += 1;
+    void beat().catch(() => undefined);
+  }, 5_000);
+  heartbeat.unref();
   const taskDefinitions = [
     ["Freeze shared protocol", "IN_PROGRESS", "high", codex, 0],
     ["Wire native delivery", "IN_PROGRESS", "normal", claude, 1],
@@ -158,7 +266,7 @@ export default async function globalSetup(config: FullConfig) {
     }
     tasks.push(task);
   }
-  await post(baseURL, token, `/api/projects/${projectId}/messages`, {
+  await post(baseURL, claudeControl, `/api/projects/${projectId}/messages`, {
     fromAgentId: "claude",
     fromSessionId: claude.id,
     recipients: [{ agentId: "codex", sessionId: codex.id }],
@@ -170,7 +278,7 @@ export default async function globalSetup(config: FullConfig) {
     references: [{ type: "task", id: tasks[0].id }],
     idempotencyKey: "e2e-message-1",
   });
-  await post(baseURL, token, `/api/projects/${projectId}/messages`, {
+  await post(baseURL, codexControl, `/api/projects/${projectId}/messages`, {
     fromAgentId: "codex",
     fromSessionId: codex.id,
     recipients: [{ agentId: "claude", sessionId: claude.id }],
@@ -182,7 +290,7 @@ export default async function globalSetup(config: FullConfig) {
     references: [],
     idempotencyKey: "e2e-message-2",
   });
-  await post(baseURL, token, `/api/projects/${projectId}/write-intents`, {
+  await post(baseURL, codexControl, `/api/projects/${projectId}/write-intents`, {
     taskId: tasks[0].id,
     sessionId: codex.id,
     globs: ["packages/protocol/**"],
@@ -192,7 +300,7 @@ export default async function globalSetup(config: FullConfig) {
     ttlSeconds: 600,
     idempotencyKey: "e2e-intent-codex",
   });
-  await post(baseURL, token, `/api/projects/${projectId}/write-intents`, {
+  await post(baseURL, claudeControl, `/api/projects/${projectId}/write-intents`, {
     taskId: tasks[1].id,
     sessionId: claude.id,
     globs: ["packages/protocol/**"],
@@ -202,4 +310,5 @@ export default async function globalSetup(config: FullConfig) {
     ttlSeconds: 600,
     idempotencyKey: "e2e-intent-claude",
   });
+  return () => clearInterval(heartbeat);
 }

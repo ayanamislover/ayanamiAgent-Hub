@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import type { AgentSession, AuthorizationGrant, ModelPreset, Project } from "@crossagent/protocol";
+import { SECONDARY_PROJECT_NAME } from "./fixture-paths.js";
 
 function navigationButton(page: Page, id: string, fallbackLabel: string) {
   return page
@@ -66,6 +67,10 @@ test.beforeEach(async ({ page, request, baseURL }) => {
 
 test("opens the loopback Dashboard without the optional local login gate", async ({ page }) => {
   await page.context().clearCookies();
+  // beforeEach already left the browser on this same hash route, so navigating to it again is an
+  // in-page hash change: the document is never reloaded and the bootstrap effect never re-runs.
+  // Leaving the origin first makes the next goto a real document load.
+  await page.goto("about:blank");
   const bootstrapRequest = page.waitForRequest(
     (request) => request.method() === "POST" && request.url().endsWith("/api/dashboard/auth"),
   );
@@ -184,7 +189,8 @@ test("opens a task inspector and receives the live stream", async ({ page }, tes
   await expect(
     page.getByRole("heading", { name: "Freeze shared protocol", level: 2 }),
   ).toBeVisible();
-  await expect(page.getByText(/^(?:LIVE|实时)$/)).toBeVisible();
+  // The pill is uppercased by CSS, so the DOM still holds the dictionary casing.
+  await expect(page.getByText(/^(?:live|实时)$/i)).toBeVisible();
   const root = resolve(import.meta.dirname, "../../..");
   const screenshots = resolve(root, "output", "playwright", "screenshots");
   mkdirSync(screenshots, { recursive: true });
@@ -198,7 +204,7 @@ test("keeps the exact project and task in the Communications URL across reload",
   page,
   request,
   baseURL,
-}, testInfo) => {
+}) => {
   const root = resolve(import.meta.dirname, "../../..");
   const token = readFileSync(
     resolve(root, "output", "playwright", "e2e-data", "dashboard-token"),
@@ -218,22 +224,8 @@ test("keeps the exact project and task in the Communications URL across reload",
   const task = overview.tasks.find((candidate) => candidate.title === "Freeze shared protocol");
   if (!task) throw new Error("Primary E2E task is missing");
 
-  const secondaryPath = resolve(
-    root,
-    "output",
-    "playwright",
-    `fixture-project-navigation-${testInfo.project.name}`,
-  );
-  mkdirSync(secondaryPath, { recursive: true });
-  const joinedResponse = await request.post(`${baseURL}/api/projects/join`, {
-    headers,
-    data: {
-      cwd: secondaryPath,
-      name: `Navigation fixture ${testInfo.project.name}`,
-      allowCreate: true,
-    },
-  });
-  const secondary = ((await joinedResponse.json()) as { project: Project }).project;
+  const secondary = projects.find((project) => project.name === SECONDARY_PROJECT_NAME);
+  if (!secondary) throw new Error("Secondary E2E project is missing");
 
   const filteredMessages = page.waitForResponse((response) => {
     const url = new URL(response.url());
@@ -285,12 +277,19 @@ test("sends one envelope to both agents", async ({ page }, testInfo) => {
   const taskScope = page.getByRole("button", { name: /^Task scope/ });
   await taskScope.click();
   await page.getByRole("option", { name: /^Freeze shared protocol/ }).click();
+  // Committing an option restores focus to its trigger on the next frame. Without waiting for that,
+  // the Enter below lands back on the task scope trigger and reopens it instead.
+  await expect(taskScope).toBeFocused();
   const scopedTaskId = new URLSearchParams(new URL(page.url()).hash.split("?", 2)[1]).get("taskId");
   expect(scopedTaskId).toBeTruthy();
   const recipient = page.getByRole("button", { name: /^Message recipient/ });
   await recipient.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("listbox", { name: "Message recipient" })).toBeVisible();
+  const recipientList = page.getByRole("listbox", { name: "Message recipient" });
+  await expect(recipientList).toBeVisible();
+  // Opening moves focus onto the selected option a frame later. Pressing End before that lands,
+  // the trigger handles the key instead of the list and the roving tabindex is left behind.
+  await expect(recipientList.locator(":focus")).toHaveCount(1);
   await page.keyboard.press("End");
   const finalRecipient = page.getByRole("option", {
     name: "Both · Codex + Claude",
@@ -309,6 +308,11 @@ test("sends one envelope to both agents", async ({ page }, testInfo) => {
 
   const priority = page.getByRole("button", { name: /^Message priority/ });
   await recipient.click();
+  // Opening also moves focus onto the selected option on the next frame. Tabbing before that lands
+  // leaves the trigger focused, and a trigger does not handle Tab -- the list would stay open.
+  await expect(
+    page.getByRole("option", { name: "Both · Codex + Claude", exact: true }),
+  ).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(priority).toBeFocused();
   await expect(page.getByRole("listbox", { name: "Message recipient" })).toBeHidden();
@@ -347,6 +351,9 @@ test("sends one envelope to both agents", async ({ page }, testInfo) => {
   await page.getByRole("heading", { name: "Communications", exact: true }).click();
   await expect(page.getByRole("listbox", { name: "Message priority" })).toBeHidden();
   await priority.click();
+  await expect(
+    page.getByRole("listbox", { name: "Message priority" }).locator(":focus"),
+  ).toHaveCount(1);
   await page.keyboard.press("Shift+Tab");
   await expect(recipient).toBeFocused();
   await expect(page.getByRole("listbox", { name: "Message priority" })).toBeHidden();
@@ -843,11 +850,11 @@ test("launches, drives, revokes, and explicitly terminates a mocked terminal", a
       json: [
         ...presets,
         {
-          id: "mdp_e2e_low_only",
+          id: "mdp_e2e_no_effort",
           agentId: "codex",
-          modelId: "e2e-low-only",
-          label: "E2E Low Only",
-          reasoningEfforts: ["low"],
+          modelId: "e2e-no-effort",
+          label: "E2E No Effort",
+          reasoningEfforts: [],
           launchArgs: ["-m", "{model}"],
           effortArgs: ["-c", "model_reasoning_effort={effort}"],
           enabled: true,
@@ -913,7 +920,7 @@ test("launches, drives, revokes, and explicitly terminates a mocked terminal", a
   await page.keyboard.press("Escape");
 
   await modelPicker.click();
-  await page.getByRole("option", { name: "E2E Low Only", exact: true }).click();
+  await page.getByRole("option", { name: "E2E No Effort", exact: true }).click();
   await expect(effortPicker).toContainText("Model default");
   await expect(effortPicker).toBeDisabled();
   await modelPicker.click();
