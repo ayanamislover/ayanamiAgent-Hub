@@ -27,8 +27,14 @@ export default defineConfig({
     // slow enough at all three that the same tests time out there while finishing in well under a
     // second here. A raised ceiling still fails a genuine hang; it just stops reporting a slower
     // machine as a broken one.
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
+    //
+    // 30s was not enough. The heaviest cases -- replaying every declared credential-rotation crash
+    // point, and the version 6 migration rollback -- take 6s and 4s here and hit the 30s wall on the
+    // runner, where four workers compete for four cores. The runner also reported
+    // `[vitest-worker]: Timeout calling "onTaskUpdate"`, which is that same starvation seen from the
+    // reporter's side. Which cases failed changed from run to run, so this is a margin problem.
+    testTimeout: 90_000,
+    hookTimeout: 90_000,
     env: {
       TMP: canonicalTmpdir,
       TEMP: canonicalTmpdir,

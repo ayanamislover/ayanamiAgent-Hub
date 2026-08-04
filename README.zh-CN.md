@@ -48,7 +48,9 @@ Hub 从不调用模型。两个 Agent 各自保留自己的运行时；它们共
 - 原子任务认领、确定性进度、离线 mailbox、write-intent 冲突、不可变 review bundle、独立 worktree 审查。
 - doctor、脱敏 diagnostics、migration 前备份、手动 backup/restore。
 
-Hub 默认只监听 `127.0.0.1:4387`。Bearer token 存在用户目录的 `.crossagent/token`；本机 Dashboard 默认自动换取 HttpOnly cookie，不显示登录页。需要共享机器上的显式 Dashboard 登录门时，设置 `CROSSAGENT_DASHBOARD_AUTH=required`，并通过 `crossagent open` 的一次性 launch code 或 Dashboard token 登录。该开关不影响 Agent、Bridge、REST、WebSocket 或 MCP 的凭据与 scope 校验；关闭 Dashboard 登录门也只允许用于 loopback 监听。
+Hub 默认只监听 `127.0.0.1:4387`。这里没有"一个 bearer token"：Dashboard、adapter bootstrap、capture、injection 各持有一份独立凭据，都放在用户目录的 `.crossagent` 下，各自带自己的 scope。Dashboard 用的是 `.crossagent/dashboard-token`，本机 Dashboard 会自动把它换成 HttpOnly cookie，不显示登录页。Agent 的数据平面从不使用该凭据——它走的是按会话签发的 session ticket。
+
+需要共享机器上的显式 Dashboard 登录门时，设置 `CROSSAGENT_DASHBOARD_AUTH=required`，并通过 `crossagent open` 的一次性 launch code 或 Dashboard token 登录。该开关不影响 Agent、Bridge、REST、WebSocket 或 MCP 的凭据与 scope 校验；关闭 Dashboard 登录门也只允许用于 loopback 监听。
 
 ## 平台支持
 

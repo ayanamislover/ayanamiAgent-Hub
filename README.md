@@ -56,12 +56,16 @@ state, and an event stream that either can replay after a disconnect.
   review bundles, isolated worktree review.
 - `doctor`, redacted diagnostics, pre-migration backups, manual backup and restore.
 
-The Hub listens on `127.0.0.1:4387` only, by default. The bearer token lives in `.crossagent/token`
-under your home directory. A local Dashboard exchanges it for an HttpOnly cookie automatically and
-shows no login page. On a shared machine, set `CROSSAGENT_DASHBOARD_AUTH=required` for an explicit
-Dashboard login, using either a one-time launch code from `crossagent open` or the Dashboard token.
-That switch does not affect credential or scope checks for agents, Bridges, REST, WebSocket or MCP,
-and the login gate may only be disabled while listening on loopback.
+The Hub listens on `127.0.0.1:4387` only, by default. There is no single bearer token: the Dashboard,
+adapter bootstrap, capture and injection each hold a separate credential under `.crossagent` in your
+home directory, with its own scopes. The Dashboard's is `.crossagent/dashboard-token`, and a local
+Dashboard exchanges it for an HttpOnly cookie automatically and shows no login page. Agent
+data-plane access never uses that credential — it runs on session tickets issued per session.
+
+On a shared machine, set `CROSSAGENT_DASHBOARD_AUTH=required` for an explicit Dashboard login, using
+either a one-time launch code from `crossagent open` or the Dashboard token. That switch does not
+affect credential or scope checks for agents, Bridges, REST, WebSocket or MCP, and the login gate
+may only be disabled while listening on loopback.
 
 ## Platform support
 

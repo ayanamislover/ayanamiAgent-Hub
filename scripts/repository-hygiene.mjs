@@ -173,6 +173,20 @@ if (workLogEntries > 50) {
   problems.push(`agents_task.md has ${workLogEntries} entries; maximum is 50`);
 }
 
+// docs/protocol.md documented `GET /ws?token=<bearer>` long after the server started refusing a
+// credential in the URL. A reader following it gets a 403, and the habit it teaches -- pasting a
+// token into a URL, where proxies, history and referrers keep it -- is the real cost. Documentation
+// drifts silently, so the shape is refused here rather than left to review.
+const credentialInUrl = /[?&](?:token|bearer|access_token)=/;
+for (const file of trackedFiles.filter((name) => name.endsWith(".md"))) {
+  const lines = readFileSync(resolve(repositoryRoot, file), "utf8").split(/\r?\n/);
+  for (const [index, line] of lines.entries()) {
+    if (credentialInUrl.test(line)) {
+      problems.push(`${file}:${index + 1} documents a credential in a URL: ${line.trim()}`);
+    }
+  }
+}
+
 if (problems.length > 0) {
   console.error("Repository hygiene failed:");
   for (const problem of problems) console.error(`- ${problem}`);

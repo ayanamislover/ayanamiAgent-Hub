@@ -488,6 +488,17 @@ async function signedAuthorityFixture(
   };
 }
 
+/**
+ * A budget short enough that a hanging endpoint always exceeds it, and long enough that the local
+ * work before the request -- taking the spool lock and writing the attempt record -- still finishes
+ * on a loaded runner. At 20ms a GitHub Windows runner sometimes blew the budget before the attempt
+ * was recorded at all, which is not the condition these cases are about.
+ */
+const CAPTURE_BUDGET_MS = 200;
+
+/** How long a case waits before declaring that the hook hung the host outright. */
+const HOST_PATIENCE_MS = 5_000;
+
 describe("hook fallback", () => {
   it("decodes UTF-8 once when an emoji is split across stdin chunks", async () => {
     const prompt = "before 🤖 after";
@@ -983,11 +994,11 @@ describe("hook fallback", () => {
           captureToken: "capture-token",
           fetch: fetchMock,
           spoolDir,
-          coordinationBudgetMs: 20,
+          coordinationBudgetMs: CAPTURE_BUDGET_MS,
         } as Parameters<typeof executeHook>[2] & { coordinationBudgetMs: number },
       ),
       new Promise<"host-timeout">((resolveTimeout) =>
-        setTimeout(() => resolveTimeout("host-timeout"), 200),
+        setTimeout(() => resolveTimeout("host-timeout"), HOST_PATIENCE_MS),
       ),
     ]);
 
@@ -1097,13 +1108,13 @@ describe("hook fallback", () => {
         {
           token: "",
           captureToken: "capture-token",
-          captureTimeoutMs: 20,
+          captureTimeoutMs: CAPTURE_BUDGET_MS,
           fetch: (async () => await new Promise<Response>(() => undefined)) as typeof fetch,
           spoolDir,
         },
       ),
       new Promise<"host-timeout">((resolveTimeout) =>
-        setTimeout(() => resolveTimeout("host-timeout"), 200),
+        setTimeout(() => resolveTimeout("host-timeout"), HOST_PATIENCE_MS),
       ),
     ]);
 
@@ -1771,7 +1782,7 @@ describe("hook fallback", () => {
       {
         token: "",
         captureToken: "",
-        captureTimeoutMs: 20,
+        captureTimeoutMs: CAPTURE_BUDGET_MS,
         spoolDir,
         fetch: async () => {
           throw new Error("lost_response");

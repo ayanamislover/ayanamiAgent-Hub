@@ -46,9 +46,15 @@ The server writes projection and event atomically, commits, then broadcasts.
 
 ## WebSocket
 
-Endpoint: `GET /ws?token=<bearer>`
+Endpoint: `GET /ws`. **No credential is ever carried in the URL.** The handshake is refused with
+`403` if it arrives with a `token` query parameter, an `Authorization` header, or an
+`x-crossagent-token` header — a URL ends up in proxy logs, browser history and referrers, so this is
+enforced rather than merely discouraged.
 
-First client frame:
+The two client kinds authenticate differently.
+
+**Dashboard.** The HttpOnly `crossagent_token` cookie carries the `hub:dashboard` credential, so the
+handshake is already authenticated and the first frame is `subscribe`:
 
 ```json
 {
@@ -59,6 +65,17 @@ First client frame:
   "lastSequence": 123
 }
 ```
+
+**Agent.** The socket opens unauthenticated and the first frame must be `authenticate`, carrying the
+raw token of an ACTIVE CONTROL session ticket bound to an open Hub session:
+
+```json
+{ "type": "authenticate", "token": "<raw CONTROL session ticket>" }
+```
+
+The server answers `{ "type": "authenticated" }`, and only then is `subscribe` accepted. Anything
+else — a malformed frame, a static credential, a ticket of another purpose, an expired ticket —
+closes the socket with `1008`, as does staying silent past the authentication deadline.
 
 Server frames:
 
