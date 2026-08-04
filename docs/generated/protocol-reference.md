@@ -33,7 +33,7 @@ with an ACTIVE `MODEL_MCP` session ticket.
 | `crossagent_update_task` | Update task state or summary while enforcing the state machine and review gate. |
 | `crossagent_update_todo` | Create or update structured TODO evidence for a task. |
 
-## HTTP routes (89)
+## HTTP routes (90)
 
 Every route the Hub registers, with the module that registers it. Authentication and scope are
 per-route and are described in [the protocol](../protocol.md).
@@ -69,6 +69,7 @@ per-route and are described in [the protocol](../protocol.md).
 | GET | `/api/model-presets` | `apps\hub\src\api\routes.ts` |
 | POST | `/api/model-presets` | `apps\hub\src\api\routes.ts` |
 | DELETE | `/api/model-presets/:id` | `apps\hub\src\api\routes.ts` |
+| GET | `/api/onboarding` | `apps\hub\src\api\routes.ts` |
 | GET | `/api/projects` | `apps\hub\src\api\routes.ts` |
 | POST | `/api/projects/:projectId/artifacts` | `apps\hub\src\api\routes.ts` |
 | GET | `/api/projects/:projectId/authorizations` | `apps\hub\src\api\routes.ts` |
@@ -130,40 +131,41 @@ per-route and are described in [the protocol](../protocol.md).
 | GET | `/ws` | `apps\hub\src\websocket\project-socket.ts` |
 | GET | `/ws/terminal` | `apps\hub\src\websocket\terminal-socket.ts` |
 
-## Command line (30)
+## Command line (31)
 
 The `crossagent` command tree as Commander registers it in `packages/cli/src/bin.ts`.
 
-| Command | Arguments |
-| --- | --- |
-| `crossagent backup` | — |
-| `crossagent backup create` | `[path]` |
-| `crossagent backup restore` | `<path>` |
-| `crossagent claude-channel` | — |
-| `crossagent claude-channel install` | `[path]` |
-| `crossagent codex` | — |
-| `crossagent compatibility` | — |
-| `crossagent compatibility probe` | `<client>` |
-| `crossagent diagnostics` | — |
-| `crossagent diagnostics export` | `[path]` |
-| `crossagent doctor` | — |
-| `crossagent hooks` | — |
-| `crossagent hooks install` | `[path]` `<client>` |
-| `crossagent inbox` | — |
-| `crossagent init` | `[path]` |
-| `crossagent managed-bridge` | — |
-| `crossagent managed-bridge supervise` | — |
-| `crossagent open` | — |
-| `crossagent project` | — |
-| `crossagent project get` | `<id>` |
-| `crossagent project join` | `[path]` |
-| `crossagent project list` | — |
-| `crossagent review` | — |
-| `crossagent review checkout` | `<id>` |
-| `crossagent review cleanup` | `<id>` |
-| `crossagent start` | — |
-| `crossagent status` | — |
-| `crossagent stop` | — |
-| `crossagent task` | — |
-| `crossagent task list` | — |
+| Command | Arguments | What it does |
+| --- | --- | --- |
+| `crossagent backup` | — | — |
+| `crossagent backup create` | `[path]` | — |
+| `crossagent backup restore` | `<path>` | — |
+| `crossagent claude-channel` | — | — |
+| `crossagent claude-channel install` | `[path]` | — |
+| `crossagent codex` | — | — |
+| `crossagent compatibility` | — | — |
+| `crossagent compatibility probe` | `<client>` | — |
+| `crossagent diagnostics` | — | — |
+| `crossagent diagnostics export` | `[path]` | — |
+| `crossagent doctor` | — | — |
+| `crossagent hooks` | — | — |
+| `crossagent hooks install` | `[path]` `<client>` | — |
+| `crossagent inbox` | — | — |
+| `crossagent init` | `[path]` | — |
+| `crossagent managed-bridge` | — | — |
+| `crossagent managed-bridge supervise` | — | — |
+| `crossagent open` | — | — |
+| `crossagent project` | — | — |
+| `crossagent project get` | `<id>` | — |
+| `crossagent project join` | `[path]` | — |
+| `crossagent project list` | — | — |
+| `crossagent review` | — | — |
+| `crossagent review checkout` | `<id>` | — |
+| `crossagent review cleanup` | `<id>` | — |
+| `crossagent setup` | `[path]` | initialize, start, register, probe, install, verify and open, in that order |
+| `crossagent start` | — | — |
+| `crossagent status` | — | — |
+| `crossagent stop` | — | — |
+| `crossagent task` | — | — |
+| `crossagent task list` | — | — |
 

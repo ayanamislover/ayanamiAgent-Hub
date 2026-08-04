@@ -34,7 +34,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "node apps/hub/dist/main.js",
+    command: "node apps/dashboard/e2e/start-hub.mjs",
     cwd: root,
     url: "http://127.0.0.1:4390/api/health",
     timeout: 30_000,

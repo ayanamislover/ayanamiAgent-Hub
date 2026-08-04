@@ -1,0 +1,98 @@
+/* Owned by the first-run wizard alone, so it can be deleted with the component. */
+
+.first-run-wizard > p {
+  margin: 0;
+  padding: 14px 19px 0;
+  font-size: var(--type-body-sm);
+}
+.first-run-wizard > p:last-child {
+  padding-bottom: 16px;
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.wizard-steps {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0 19px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wizard-step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.wizard-step:first-child {
+  border-top: none;
+}
+
+.wizard-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--muted-2);
+  font:
+    var(--type-micro) / 1 "Cascadia Code",
+    monospace;
+}
+/* The number carries the same state as the pill, so a scan down the left edge is enough. */
+.wizard-step.done .wizard-step-index {
+  color: var(--green);
+  border-color: var(--green);
+}
+.wizard-step.blocked .wizard-step-index {
+  color: var(--red);
+  border-color: var(--red);
+}
+.wizard-step.waiting .wizard-step-index {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.wizard-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.wizard-step-body strong {
+  font-size: var(--type-body-sm);
+}
+.wizard-step-body .muted {
+  font-size: var(--type-meta);
+}
+
+.wizard-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  min-width: 0;
+}
+.wizard-command code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: var(--panel-2);
+  color: var(--accent);
+  font:
+    var(--type-meta) / 1.4 "Cascadia Code",
+    monospace;
+}

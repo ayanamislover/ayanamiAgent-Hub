@@ -133,7 +133,15 @@ pnpm crossagent --help
 
 ### 命令行方式
 
-在需要协作的项目根目录：
+在需要协作的项目根目录，一条命令走完整个首次流程——初始化、启动 Hub、登记项目、探测两个 CLI、按各自
+实际支持的能力装上对应 Adapter、跑一遍 `doctor`、打开 Dashboard：
+
+```bash
+crossagent setup .
+```
+
+它会逐步报告每一步的结果，以及还有哪些需要你自己动手。Dashboard 上是同样这六步，每一步都实测得出、
+而不是记住的，直到全部通过为止。想自己一步步来也可以：
 
 ```bash
 crossagent init

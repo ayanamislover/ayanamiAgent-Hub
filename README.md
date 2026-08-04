@@ -146,7 +146,16 @@ Desktop task into a Bridge. Full steps and the Claude prompts are in
 
 ### Command line
 
-From the root of the project you want to collaborate on:
+From the root of the project you want to collaborate on, one command does the whole first run —
+initialize, start the Hub, register the project, probe both CLIs, install whichever Adapter each one
+actually supports, run `doctor`, and open the Dashboard:
+
+```bash
+crossagent setup .
+```
+
+It reports every step and what is left to do by hand. The Dashboard shows the same six steps, each
+measured rather than remembered, until they all pass. If you would rather run the sequence yourself:
 
 ```bash
 crossagent init

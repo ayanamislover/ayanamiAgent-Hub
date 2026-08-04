@@ -18,6 +18,7 @@ import { ConflictsPage } from "./pages/conflicts.js";
 import { AuditPage } from "./pages/audit.js";
 import { SettingsPage } from "./pages/settings.js";
 import { ProjectOnboarding } from "./components/project-manager.js";
+import { FirstRunWizard } from "./components/first-run-wizard.js";
 import { t } from "./i18n.js";
 
 const ConsolePage = lazy(() =>
@@ -274,6 +275,13 @@ export function App() {
   return (
     <>
       <AppShell projects={projects.data} metrics={metrics.data}>
+        {page === "overview" && (
+          <FirstRunWizard
+            projectId={overview.data.project.id}
+            projectCount={projects.data.length}
+            sessions={overview.data.sessions}
+          />
+        )}
         {content}
       </AppShell>
       <CommandPalette tasks={overview.data.tasks} />

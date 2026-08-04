@@ -231,15 +231,15 @@ function render({ tools, routes, commands }) {
     "",
     "The `crossagent` command tree as Commander registers it in `packages/cli/src/bin.ts`.",
     "",
-    // Commander is not given a description for any of these yet, so the column would be empty for
-    // every row. It appears by itself once the commands carry one.
+    // The column appears by itself once any command carries a description, and an empty cell reads
+    // as the same "nothing here" the Arguments column already uses rather than as a broken row.
     ...(commands.some((command) => command.description)
       ? [
           "| Command | Arguments | What it does |",
           "| --- | --- | --- |",
           ...commands.map(
             (command) =>
-              `| \`crossagent ${command.name}\` | ${command.arguments.map((part) => `\`${escape(part)}\``).join(" ") || "—"} | ${escape(command.description)} |`,
+              `| \`crossagent ${command.name}\` | ${command.arguments.map((part) => `\`${escape(part)}\``).join(" ") || "—"} | ${escape(command.description) || "—"} |`,
           ),
         ]
       : [

@@ -34,6 +34,7 @@ import {
 import { initializeProject, projectRoot } from "./project-init.js";
 import { checkoutReview, cleanupReview } from "./review-worktree.js";
 import { readRetiredThread, recordRetiredThread } from "./retired-threads.js";
+import { runSetup } from "./setup.js";
 import { createBackup, restoreBackup } from "./backup.js";
 import {
   awaitCodexBridgeRunOwnership,
@@ -189,6 +190,32 @@ program.command("open").action(async () => {
 });
 
 program.command("doctor").action(async () => print(await collectDiagnostics()));
+
+program
+  .command("setup")
+  .description("initialize, start, register, probe, install, verify and open, in that order")
+  .argument("[path]", "project path", ".")
+  .option("--port <port>", "listen port", (value) => Number(value))
+  .option("--no-open", "do not open the Dashboard at the end")
+  .action(async (path: string, options) => {
+    const report = await runSetup(
+      { path, port: options.port as number | undefined, open: options.open as boolean },
+      {
+        initializeProject: (root) => initializeProject(root),
+        startHub: (startOptions) => startHub(startOptions),
+        joinProject: (root) => joinedProject(root),
+        probeCodex: (probeOptions) => probeCodex(probeOptions),
+        probeClaude: () => probeClaude(),
+        installClaudeChannel: (root, projectId) => installClaudeChannel(root, projectId),
+        installClaudeHooks: (root) => installLifecycleHooks("claude", root),
+        installCodexHooks: (root) => installLifecycleHooks("codex", root),
+        collectDiagnostics: () => collectDiagnostics(),
+        openDashboard: (baseUrl) => openDashboard(baseUrl),
+      },
+    );
+    print(report);
+    if (!report.ok) process.exitCode = 1;
+  });
 
 const managedBridge = program.command("managed-bridge");
 managedBridge

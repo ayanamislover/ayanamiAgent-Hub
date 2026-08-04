@@ -20,6 +20,13 @@ snapshot. It becomes the first tagged release.
   runs with only Node installed — no pnpm, no compiler, no network — and ships `SHA256SUMS.txt`, an
   SPDX 2.3 SBOM and a `release.json` recording the build identity and the Node ABI its native
   addons were compiled for.
+- `crossagent setup .` runs the whole first-run sequence in one command: initialize, start the Hub,
+  register the project, probe both CLIs, install whichever Adapter each one actually supports, run
+  diagnostics and open the Dashboard. It keeps going past a step that fails when the rest is still
+  worth doing, and reports what is left to do by hand.
+- The Dashboard opens on a six-step first-run wizard, backed by a read-only `GET /api/onboarding`.
+  Every step is recomputed from what the Hub can see rather than from a stored checklist, so it
+  cannot disagree with the Agents page or claim an uninstalled Adapter is still there.
 - `crossagent compatibility probe codex|claude` measures what a client's app-server actually
   supports instead of inferring it from a version string, stores the dated result under
   `~/.crossagent/compatibility/`, and `crossagent doctor` carries it into a bug report. Only a

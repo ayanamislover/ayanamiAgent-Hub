@@ -779,6 +779,76 @@ export const messageCatalog = {
     en: "Switching the language reloads the Dashboard.",
     "zh-CN": "切换语言会重新载入 Dashboard。",
   },
+  "First run": { en: "First run", "zh-CN": "首次运行" },
+  "Finish connecting this workspace": {
+    en: "Finish connecting this workspace",
+    "zh-CN": "把这个工作区接通",
+  },
+  "{done} of {total} steps complete. Every step is measured, not remembered.": {
+    en: "{done} of {total} steps complete. Every step is measured, not remembered.",
+    "zh-CN": "已完成 {done}/{total} 步。每一步都是实测出来的，不是记下来的。",
+  },
+  "Or run crossagent setup . to do the whole sequence in one command.": {
+    en: "Or run crossagent setup . to do the whole sequence in one command.",
+    "zh-CN": "也可以直接跑 crossagent setup . ，一条命令走完整个流程。",
+  },
+  "Recheck setup": { en: "Recheck setup", "zh-CN": "重新检测" },
+  "Hide setup steps": { en: "Hide setup steps", "zh-CN": "隐藏引导步骤" },
+  "Copy command": { en: "Copy command", "zh-CN": "复制命令" },
+  "Command copied": { en: "Command copied", "zh-CN": "命令已复制" },
+  "Detect Codex CLI": { en: "Detect Codex CLI", "zh-CN": "探测 Codex CLI" },
+  "Connect Codex Bridge": { en: "Connect Codex Bridge", "zh-CN": "连接 Codex Bridge" },
+  "Detect Claude capabilities": {
+    en: "Detect Claude capabilities",
+    "zh-CN": "探测 Claude 能力",
+  },
+  "Install the Claude Adapter": {
+    en: "Install the Claude Adapter",
+    "zh-CN": "安装 Claude Adapter",
+  },
+  "Send a test message": { en: "Send a test message", "zh-CN": "发一条测试消息" },
+  Waiting: { en: "Waiting", "zh-CN": "等待中" },
+  Blocked: { en: "Blocked", "zh-CN": "受阻" },
+  "{count} project(s) registered": {
+    en: "{count} project(s) registered",
+    "zh-CN": "已登记 {count} 个项目",
+  },
+  "No project is registered yet": {
+    en: "No project is registered yet",
+    "zh-CN": "还没有登记任何项目",
+  },
+  "Not probed yet": { en: "Not probed yet", "zh-CN": "尚未探测" },
+  "No codex executable answered": {
+    en: "No codex executable answered",
+    "zh-CN": "没有可用的 codex 可执行文件",
+  },
+  "No claude executable answered": {
+    en: "No claude executable answered",
+    "zh-CN": "没有可用的 claude 可执行文件",
+  },
+  "{version}": { en: "{version}", "zh-CN": "{version}" },
+  Connected: { en: "Connected", "zh-CN": "已连接" },
+  "Waiting for a Bridge session": {
+    en: "Waiting for a Bridge session",
+    "zh-CN": "等待 Bridge 会话接入",
+  },
+  "Custom Channel available": { en: "Custom Channel available", "zh-CN": "支持 Custom Channel" },
+  "Custom Channel unavailable, Hook fallback applies": {
+    en: "Custom Channel unavailable, Hook fallback applies",
+    "zh-CN": "不支持 Custom Channel，走 Hook 回退",
+  },
+  "Custom Channel installed": { en: "Custom Channel installed", "zh-CN": "已安装 Custom Channel" },
+  "Hook fallback installed": { en: "Hook fallback installed", "zh-CN": "已安装 Hook 回退" },
+  "Ready to install": { en: "Ready to install", "zh-CN": "可以安装了" },
+  "Probe Claude first": { en: "Probe Claude first", "zh-CN": "先探测 Claude" },
+  "{count} message(s) exchanged": {
+    en: "{count} message(s) exchanged",
+    "zh-CN": "已交换 {count} 条消息",
+  },
+  "No message has been sent yet": {
+    en: "No message has been sent yet",
+    "zh-CN": "还没有发过消息",
+  },
 } as const satisfies Record<string, Message>;
 
 export type MessageKey = keyof typeof messageCatalog;

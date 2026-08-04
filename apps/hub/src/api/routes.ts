@@ -48,6 +48,7 @@ import { z } from "zod";
 import type { HubStore } from "../services/hub-store.js";
 import type { PtyService } from "../services/pty-service.js";
 import { readArtifact } from "../git/git-service.js";
+import { readOnboardingState } from "./onboarding.js";
 import { HubError, NotFoundError } from "../domain/errors.js";
 import {
   assertPrincipalKind,
@@ -764,6 +765,15 @@ export async function registerApiRoutes(
     const principal = requestPrincipal(request);
     assertPrincipalKind(principal, "DASHBOARD_USER");
     return store.decideAuthorization(principal, id, parsed);
+  });
+
+  app.get("/api/onboarding", async (request) => {
+    assertPrincipalKind(requestPrincipal(request), "DASHBOARD_USER");
+    const { projectId } = query(z.object({ projectId: z.string().min(4).optional() }), request);
+    // The root comes from the Hub's own registration, never from the request, so the paths this
+    // reads are ones the Hub already recorded rather than ones a caller named.
+    const root = projectId ? (store.getProjectRegistration(projectId).root ?? null) : null;
+    return readOnboardingState({ dataDir: runtime.dataDir, projectRoot: root });
   });
 
   app.get("/api/model-presets", async (request) => {
