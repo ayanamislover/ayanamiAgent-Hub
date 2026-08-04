@@ -273,6 +273,13 @@ describe("Hub build identity", () => {
       const response = await server.app.inject({ method: "GET", url: "/" });
       expect(response.body).toContain("verified-release-dashboard");
       expect(response.body).not.toContain("unverified-dashboard");
+      // @fastify/static changed what it hands setHeaders between 8 and 10 -- the raw ServerResponse
+      // became a FastifyReply -- and a caller left on the old API drops these silently rather than
+      // failing. A stale Dashboard bundle is a correctness problem, and the other two are the
+      // headers that keep a served asset from being sniffed or leaked in a referrer.
+      expect(response.headers["cache-control"]).toBe("no-store");
+      expect(response.headers["x-content-type-options"]).toBe("nosniff");
+      expect(response.headers["referrer-policy"]).toBe("no-referrer");
     } finally {
       await server.close();
     }

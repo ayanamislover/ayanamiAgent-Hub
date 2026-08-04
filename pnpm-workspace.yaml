@@ -2,6 +2,13 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# tsup pins esbuild to ^0.27.0, which keeps a copy carrying GHSA "arbitrary file read when running
+# the development server on Windows" -- reachable only through `esbuild serve`, which nothing here
+# starts. It is still a reported advisory against this repository, and tsup only ever asks bundle
+# APIs of it, so both copies are pinned forward to the patched line instead.
+overrides:
+  esbuild: "^0.28.1"
+
 allowBuilds:
   better-sqlite3: true
   esbuild: true

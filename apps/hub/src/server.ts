@@ -475,10 +475,12 @@ export async function createHubServer(
       // registration, so any asset rebuilt while the Hub is running 404s into the SPA fallback
       // and the browser receives index.html in place of the stylesheet.
       wildcard: true,
-      setHeaders(response) {
-        response.setHeader("Cache-Control", "no-store");
-        response.setHeader("X-Content-Type-Options", "nosniff");
-        response.setHeader("Referrer-Policy", "no-referrer");
+      // @fastify/static 10 hands this a FastifyReply where 8 handed the raw ServerResponse, so the
+      // headers go through the Fastify API rather than node's.
+      setHeaders(reply) {
+        reply.header("Cache-Control", "no-store");
+        reply.header("X-Content-Type-Options", "nosniff");
+        reply.header("Referrer-Policy", "no-referrer");
       },
     });
     app.setNotFoundHandler((request, reply) => {
