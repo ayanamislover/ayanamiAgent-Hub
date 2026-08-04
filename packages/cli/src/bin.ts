@@ -33,6 +33,7 @@ import {
 } from "./build-identity.js";
 import { initializeProject, projectRoot } from "./project-init.js";
 import { checkoutReview, cleanupReview } from "./review-worktree.js";
+import { readRetiredThread, recordRetiredThread } from "./retired-threads.js";
 import { createBackup, restoreBackup } from "./backup.js";
 import {
   awaitCodexBridgeRunOwnership,
@@ -386,6 +387,20 @@ program
       // child reads even the non-secret managed control header.
       assertRunningVerifiedCliEntrypoint(resolve(process.argv[1] ?? ""));
     }
+    // A thread whose Codex rollout was retired is not resumed again: a successor is the only
+    // mitigation Codex leaves available, and this is the one point where creating one is safe. The
+    // managed child never re-decides it -- its parent already resolved the thread and bound a launch
+    // reservation to exactly that answer -- and `--status`/`--stop` still address the old thread by
+    // id, because a retired thread's process is exactly the one an operator needs to reach.
+    if (!options.managed && !options.status && !options.stop && options.thread) {
+      const retired = readRetiredThread(options.thread as string);
+      if (retired) {
+        process.stderr.write(
+          `[crossagent] not resuming a retired Codex thread (${retired.reason}); starting a successor thread instead\n`,
+        );
+        options.thread = undefined;
+      }
+    }
     const managedBuildIdentity =
       options.managed && bridgeRunId && bridgeControlPath && options.projectId
         ? readCodexBridgeManagedBuildIdentity({
@@ -738,6 +753,9 @@ program
         } else {
           writeCodexBridgeHealth(selection.projectId, agentId, health);
         }
+      },
+      onThreadRetirementRequired: (request) => {
+        recordRetiredThread(request);
       },
       onThreadResolved: managedOwner
         ? async (threadId) => {

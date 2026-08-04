@@ -12,4 +12,5 @@ export * from "./installers.js";
 export * from "./paths.js";
 export * from "./process-manager.js";
 export * from "./project-init.js";
+export * from "./retired-threads.js";
 export * from "./review-worktree.js";

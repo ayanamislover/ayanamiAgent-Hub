@@ -121,11 +121,33 @@ The Bridge only appends to this file when it delivers; the bulk is the user's ow
 conversation. It cannot be truncated safely — Codex owns and reads the format. The mitigation is to
 retire a long-running thread rather than keep one alive indefinitely.
 
+That retirement is now watched for and acted on. The Bridge times every confirmation `thread/read`
+and samples the rollout on each heartbeat — on each heartbeat as well as around a read, because the
+user's own conversation grows the file whether or not the Bridge delivers anything. Past 256 MiB
+`crossagent codex --status` reports a warning while the Bridge stays healthy; past 512 MiB, or after
+a run of slow or timed-out reads, the thread is marked for retirement, the Bridge reports
+`degraded`, and the verdict is recorded. The next launch does not resume a retired thread: it starts
+a successor.
+
+It stops short of swapping the thread under a running session, and deliberately. Rebinding a live
+session to a different Codex thread would mean rebinding its whole ticket lineage, which the ticket
+runtime refuses by design — and delivery would move to a thread nobody is reading. Degraded and
+honest beats invisible.
+
 这一条与上一条无关，且该文件不是本项目写的。Codex 把每个线程存成只增不减的
 `~/.codex/sessions/rollout-*.jsonl`，没有压缩或轮转机制。2026-08-03 实测：一个 7 月 28 日开始的线程已
 达 605 MB，另有 466 MB 和 634 MB 各一。到这个体量时追加仍然成功，但 `thread/read` 会直接超时，于是长期
 运行的线程最终连本来能用的调用也不再响应。Bridge 只在投递时往里追加，绝大部分是用户自己与 Codex 的对话；
 该文件不能安全截断——格式归 Codex 所有并由它读取。缓解办法只有让长期线程适时退役，而不是永远续用。
+
+这条退役现在会被自动盯住并执行：Bridge 给每次确认用的 `thread/read` 计时，并在每个心跳上采一次
+rollout 体积——之所以不只在读的时候采，是因为用户自己聊天同样会把文件撑大，跟 Bridge 有没有投递无关。
+超过 256 MiB，`crossagent codex --status` 会给出警告但 Bridge 仍算健康；超过 512 MiB，或连续几次读变慢
+甚至超时，该线程被判定应退役，Bridge 转为 `degraded` 并把结论记下来，下次启动不再 resume 这个线程，而是
+开一条 successor。
+
+它刻意没有做的是在会话运行中直接换线：把活着的 session 重新绑到另一条 Codex 线程，等于重绑整条 ticket
+lineage，而 ticket 运行时按设计就会拒绝；何况投递会被搬到一条没人在看的线程里。降级但诚实，好过静默失效。
 
 ---
 

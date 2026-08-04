@@ -22,6 +22,7 @@ import type { CodexAppServer } from "../src/app-server.js";
 import type { AppServerRecoveryRequired } from "../src/app-server-recovery-fuse.js";
 import { CodexBridge, type CodexBridgeLaunchContext } from "../src/bridge.js";
 import type { JsonRpcMessage } from "../src/rpc.js";
+import type { RolloutHealthThresholds, ThreadRetirementRequired } from "../src/rollout-health.js";
 import type {
   CodexSessionTicketVault,
   CodexSessionTicketVaultSnapshot,
@@ -362,6 +363,27 @@ class TeardownRejectingAppServer extends FakeAppServer {
       reject(new Error("Codex app-server stream closed"));
     }
     await super.stop();
+  }
+}
+
+/**
+ * A `thread/read` that takes real wall-clock time, expressed on the fake clock. Advancing the
+ * system time inside the call is what the Bridge measures, without the test having to wait.
+ */
+class SlowReadAppServer extends FakeAppServer {
+  constructor(private readonly readDelayMs: number) {
+    // The durable item has to appear without a notification, or the confirmation short-circuits
+    // before it ever reads the thread -- and the read is the thing under test.
+    super({ autoConfirmTurnStart: false, durableTurnStartWithoutNotification: true });
+  }
+
+  override async request<T>(
+    method: string,
+    params: Record<string, unknown> = {},
+    timeoutMs?: number,
+  ): Promise<T> {
+    if (method === "thread/read") vi.setSystemTime(Date.now() + this.readDelayMs);
+    return super.request<T>(method, params, timeoutMs);
   }
 }
 
@@ -1749,6 +1771,9 @@ async function startBridge(
     onHealthChange?: (health: Record<string, unknown>) => void;
     onTerminated?: (termination: { reason: string; fatal: boolean; error?: Error }) => void;
     onAppServerRecoveryRequired?: (request: AppServerRecoveryRequired) => void | Promise<void>;
+    onThreadRetirementRequired?: (request: ThreadRetirementRequired) => void | Promise<void>;
+    rolloutHealthThresholds?: Partial<RolloutHealthThresholds>;
+    rolloutSizeReader?: { sizeBytes: (threadId: string) => number | null };
     authorityTrustManifest?: TrustedAuthorityKeyManifest;
     hookCaptureBindingMode?: "required" | "disabled";
     historicalDeliveryProofMode?: "required" | "disabled";
@@ -1793,6 +1818,9 @@ async function startBridge(
     onHealthChange: options.onHealthChange,
     onTerminated: options.onTerminated,
     onAppServerRecoveryRequired: options.onAppServerRecoveryRequired,
+    onThreadRetirementRequired: options.onThreadRetirementRequired,
+    rolloutHealthThresholds: options.rolloutHealthThresholds,
+    rolloutSizeReader: options.rolloutSizeReader,
     sessionTicketVault: options.sessionTicketVault,
     sessionOperationalCheckpointStore:
       options.sessionOperationalCheckpointStore ??
@@ -4088,6 +4116,103 @@ describe("CodexBridge resilience", () => {
       hubSocketAlive: false,
       appServerRpcAlive: false,
     });
+  });
+
+  it("watches a growing rollout across days and asks for a successor thread exactly once", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime("2026-08-01T00:00:00.000Z");
+    let rolloutBytes = 40;
+    const health: Record<string, unknown>[] = [];
+    const retirements: ThreadRetirementRequired[] = [];
+    const harness = createFetchHarness();
+    const { bridge } = await startBridge(harness, {
+      heartbeatIntervalMs: 6 * 60 * 60 * 1_000,
+      rolloutHealthThresholds: { sizeWarnBytes: 100, sizeRetireBytes: 200 },
+      rolloutSizeReader: { sizeBytes: () => rolloutBytes },
+      onHealthChange: (snapshot) => health.push(snapshot),
+      onThreadRetirementRequired: (request) => {
+        retirements.push(request);
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1_000);
+    expect(health.at(-1)).toMatchObject({
+      status: "healthy",
+      rollout: { state: "OK", reason: null, rolloutBytes: 40 },
+    });
+
+    // Day two: large enough to say so, not large enough to be a fault. The user's own conversation
+    // grows this file whether or not the Bridge delivers anything, which is why an idle day counts.
+    rolloutBytes = 150;
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1_000);
+    expect(health.at(-1)).toMatchObject({
+      status: "healthy",
+      degradedReason: null,
+      rollout: { state: "WARNING" },
+    });
+    expect(retirements).toHaveLength(0);
+
+    // Day three: past the point where thread/read stops answering.
+    rolloutBytes = 250;
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1_000);
+    expect(health.at(-1)).toMatchObject({
+      status: "degraded",
+      rollout: { state: "RETIRE" },
+    });
+    expect(String(health.at(-1)?.degradedReason)).toMatch(/rollout/u);
+    expect(retirements).toHaveLength(1);
+    expect(retirements[0]).toMatchObject({
+      kind: "CODEX_THREAD_RETIREMENT_REQUIRED",
+      schemaVersion: 1,
+      projectId: "prj_test",
+      threadId: "thr_test",
+      rolloutBytes: 250,
+    });
+
+    // Two more days of heartbeats: the verdict stands and nobody is asked twice.
+    rolloutBytes = 4_000;
+    await vi.advanceTimersByTimeAsync(48 * 60 * 60 * 1_000);
+    expect(retirements).toHaveLength(1);
+    expect(health.at(-1)).toMatchObject({ status: "degraded", rollout: { state: "RETIRE" } });
+
+    await bridge.stop();
+  });
+
+  it("measures how long a confirmation read took and retires a thread that stops answering", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime("2026-08-01T00:00:00.000Z");
+    const retirements: ThreadRetirementRequired[] = [];
+    const harness = createFetchHarness({
+      messages: {
+        msg_slow_one: actionMessage("msg_slow_one"),
+        msg_slow_two: actionMessage("msg_slow_two"),
+        msg_slow_three: actionMessage("msg_slow_three"),
+      },
+    });
+    const appServer = new SlowReadAppServer(11_000);
+    const { bridge } = await startBridge(harness, {
+      appServer,
+      rolloutHealthThresholds: { readLatencyWarnMs: 10_000 },
+      rolloutSizeReader: { sizeBytes: () => null },
+      onThreadRetirementRequired: (request) => {
+        retirements.push(request);
+      },
+    });
+
+    for (const messageId of ["msg_slow_one", "msg_slow_two", "msg_slow_three"]) {
+      await dispatchMessage(bridge, messageId);
+    }
+
+    expect(
+      appServer.requestedMethods.filter((method) => method === "thread/read").length,
+    ).toBeGreaterThanOrEqual(3);
+    expect(retirements).toHaveLength(1);
+    expect(retirements[0]?.reason).toMatch(/slow or timed out/u);
+    // Nothing was read back from the file, so the verdict rests entirely on the measured reads.
+    expect(retirements[0]?.rolloutBytes).toBeNull();
+    expect(retirements[0]?.slowestReadMs).toBe(11_000);
+
+    await bridge.stop();
   });
 
   it("keeps heartbeat delivery single-flight when timer and notification owners overlap", async () => {

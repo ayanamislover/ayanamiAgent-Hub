@@ -2,6 +2,7 @@ export * from "./app-server.js";
 export * from "./app-server-recovery-fuse.js";
 export * from "./bridge.js";
 export * from "./compatibility.js";
+export * from "./rollout-health.js";
 export * from "./model-environment.js";
 export * from "./credential-cutover-drain.js";
 export * from "./rpc.js";

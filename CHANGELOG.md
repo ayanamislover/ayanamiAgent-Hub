@@ -20,6 +20,13 @@ snapshot. It becomes the first tagged release.
   runs with only Node installed — no pnpm, no compiler, no network — and ships `SHA256SUMS.txt`, an
   SPDX 2.3 SBOM and a `release.json` recording the build identity and the Node ABI its native
   addons were compiled for.
+- `crossagent compatibility probe codex|claude` measures what a client's app-server actually
+  supports instead of inferring it from a version string, stores the dated result under
+  `~/.crossagent/compatibility/`, and `crossagent doctor` carries it into a bug report. Only a
+  JSON-RPC `-32601` counts as unsupported; any other refusal is reported inconclusive.
+- The Bridge watches the Codex rollout behind its thread — read latency, read timeouts and file
+  size — and reports it in health. Past the point where `thread/read` stops answering it marks the
+  thread for retirement, and the next launch starts a successor thread instead of resuming it.
 - `SECURITY.md` with a private vulnerability reporting route and an explicit in-scope boundary.
 - `docs/evidence/self-hosting-results.md`, holding the collaboration and review statistics with a
   provenance note naming where the numbers come from.

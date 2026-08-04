@@ -52,6 +52,13 @@ import { HubReconnectBackoff, isHubNetworkError } from "./hub-resilience.js";
 import { sanitizeModelEnvironment } from "./model-environment.js";
 import type { JsonRpcMessage } from "./rpc.js";
 import {
+  RolloutHealthMonitor,
+  RolloutSizeReader,
+  type RolloutHealthSnapshot,
+  type RolloutHealthThresholds,
+  type ThreadRetirementRequired,
+} from "./rollout-health.js";
+import {
   CodexSessionTicketRuntime,
   initialTicketContext,
   type ActiveCodexSessionTicketBundle,
@@ -157,6 +164,15 @@ export type CodexBridgeOptions = {
   onTerminated?: (termination: CodexBridgeTermination) => void | Promise<void>;
   /** No-secret local recovery request for the external OS supervisor Adapter. */
   onAppServerRecoveryRequired?: (request: AppServerRecoveryRequired) => void | Promise<void>;
+  /**
+   * Called once when this thread's Codex rollout has degraded far enough that it should be retired
+   * in favour of a successor. No-secret, and a request rather than an instruction.
+   */
+  onThreadRetirementRequired?: (request: ThreadRetirementRequired) => void | Promise<void>;
+  /** Overridable so tests do not have to write half a gigabyte to cross a threshold. */
+  rolloutHealthThresholds?: Partial<RolloutHealthThresholds>;
+  /** Seam for the rollout file, which is written by Codex and absent in tests. */
+  rolloutSizeReader?: { sizeBytes: (threadId: string) => number | null };
   /** Overridable so tests do not have to wait out a real confirmation window. */
   confirmationTimeoutMs?: number;
   /** Bounds a Hub HTTP request so one black-holed connection cannot stall every later frame. */
@@ -225,6 +241,11 @@ export type CodexBridgeHealth = {
   modelTransportState:
     "MODEL_READY" | "MODEL_RECOVERING" | "MODEL_CONFIGURED_OFFLINE" | "MODEL_HALF_OPEN";
   appServerRecoveryFuseGeneration: number;
+  /**
+   * How the Codex rollout behind this thread is holding up. It is reported even while `OK` because
+   * the useful moment is the one before it breaks, and a size that is merely growing is not a fault.
+   */
+  rollout: RolloutHealthSnapshot;
   /** Non-null from an unconfirmed push until the next confirmed one clears it. */
   degradedReason: string | null;
   updatedAt: string;
@@ -531,7 +552,7 @@ function isProvenPreSideEffectRpcRejection(method: SurfaceRpcMethod, error: unkn
   return code !== undefined && PRE_SIDE_EFFECT_RPC_CODES[method].has(code);
 }
 
-function isAppServerRequestTimeout(method: SurfaceRpcMethod, error: unknown): boolean {
+function isAppServerRequestTimeout(method: string, error: unknown): boolean {
   return (
     error instanceof Error && error.message === `Codex app-server request timed out: ${method}`
   );
@@ -659,6 +680,9 @@ export class CodexBridge {
   private threadId: string | null = null;
   /** Whether Codex has written this thread's rollout, which is what makes it resumable. */
   private threadRolloutPersisted = false;
+  private readonly rolloutHealth: RolloutHealthMonitor;
+  private readonly rolloutSize: { sizeBytes: (threadId: string) => number | null };
+  private threadRetirementPublished = false;
   private activeTurnId: string | null = null;
   private heartbeatSequence = 0;
   private heartbeatTimer: NodeJS.Timeout | null = null;
@@ -774,6 +798,8 @@ export class CodexBridge {
     this.authorityTrustManifest = Object.freeze(parsedTrustManifest);
     this.hookCaptureBindingMode = options.hookCaptureBindingMode ?? "required";
     this.historicalDeliveryProofMode = options.historicalDeliveryProofMode ?? "required";
+    this.rolloutHealth = new RolloutHealthMonitor({ thresholds: options.rolloutHealthThresholds });
+    this.rolloutSize = options.rolloutSizeReader ?? new RolloutSizeReader();
     assertPositiveFiniteOption("hubRequestTimeoutMs", options.hubRequestTimeoutMs);
     assertPositiveFiniteOption("hubSubscriptionTimeoutMs", options.hubSubscriptionTimeoutMs);
     assertPositiveFiniteOption("heartbeatIntervalMs", options.heartbeatIntervalMs);
@@ -4463,6 +4489,8 @@ export class CodexBridge {
     // An ambiguity Codex's own surface guarantees is not a fault here; anything else is.
     if (this.faultAmbiguity() !== null) return "degraded";
     if (this.pendingDeliveryStates.size > 0) return "degraded";
+    // A rollout that is merely growing is not a fault, so only the retirement verdict counts here.
+    if (this.rolloutHealth.snapshot().state === "RETIRE") return "degraded";
     if (!this.hubSocketAlive() || !this.appServerRpcAlive) return "degraded";
     return this.notificationStreamAlive() === false ? "degraded" : "healthy";
   }
@@ -4528,16 +4556,76 @@ export class CodexBridge {
     params: Record<string, unknown>,
     timeoutMs?: number,
   ): Promise<T> {
+    const startedAt = Date.now();
     try {
       const result = await this.appServer.request<T>(method, params, timeoutMs);
       this.appServerRpcAlive = true;
       this.lastAppServerRpcAt = new Date().toISOString();
+      if (method === "thread/read") {
+        this.observeRolloutRead(Date.now() - startedAt, false);
+      }
       return result;
     } catch (error: unknown) {
       // An explicit wire code means the app-server answered and disagreed, which is aliveness.
       this.appServerRpcAlive = isRpcErrorResponse(error);
+      if (method === "thread/read") {
+        this.observeRolloutRead(Date.now() - startedAt, isAppServerRequestTimeout(method, error));
+      }
       throw error;
     }
+  }
+
+  /**
+   * The single place a `thread/read` is timed, because it is the one call whose cost scales with a
+   * rollout that never shrinks. Sampling the file here rather than on a timer keeps the observation
+   * attached to the operation it explains, and costs one stat per confirmation read.
+   */
+  private observeRolloutRead(durationMs: number, timedOut: boolean): void {
+    const previous = this.rolloutHealth.snapshot().state;
+    this.rolloutHealth.observeRead({ durationMs, timedOut });
+    if (this.threadId) this.rolloutHealth.observeSize(this.rolloutSize.sizeBytes(this.threadId));
+    this.settleRolloutHealth(previous);
+  }
+
+  private observeRolloutSize(): void {
+    if (!this.threadId) return;
+    const previous = this.rolloutHealth.snapshot().state;
+    this.rolloutHealth.observeSize(this.rolloutSize.sizeBytes(this.threadId));
+    this.settleRolloutHealth(previous);
+  }
+
+  private settleRolloutHealth(previous: RolloutHealthSnapshot["state"]): void {
+    const current = this.rolloutHealth.snapshot();
+    if (current.state === previous) return;
+    if (current.state === "RETIRE") this.publishThreadRetirementRequired(current);
+    this.emitHealth();
+  }
+
+  /**
+   * Asks the supervisor for a successor thread. It is a request, not an action: swapping the thread
+   * under a live session would have to rebind the ticket lineage, which the ticket runtime refuses
+   * by design. The Bridge keeps delivering into the old thread meanwhile — degraded and honest is
+   * better than silently moving delivery to a thread nobody is reading.
+   */
+  private publishThreadRetirementRequired(snapshot: RolloutHealthSnapshot): void {
+    if (!this.threadId || this.threadRetirementPublished) return;
+    this.threadRetirementPublished = true;
+    process.stderr.write(
+      `[crossagent] this Codex thread should be retired: ${snapshot.reason ?? "rollout degraded"}\n`,
+    );
+    const listener = this.options.onThreadRetirementRequired;
+    if (!listener) return;
+    const request: ThreadRetirementRequired = {
+      schemaVersion: 1,
+      kind: "CODEX_THREAD_RETIREMENT_REQUIRED",
+      issuedAt: new Date().toISOString(),
+      projectId: this.project?.id ?? null,
+      threadId: this.threadId,
+      reason: snapshot.reason ?? "rollout degraded",
+      rolloutBytes: snapshot.rolloutBytes,
+      slowestReadMs: snapshot.slowestReadMs,
+    };
+    this.runDetached("thread retirement request", Promise.resolve(listener(request)));
   }
 
   /**
@@ -4675,6 +4763,7 @@ export class CodexBridge {
     // can legitimately disagree: one message pending against a Codex that cannot confirm it is a
     // healthy Bridge with work outstanding.
     const fault = this.faultAmbiguity();
+    const rollout = this.rolloutHealth.snapshot();
     const faultCount = this.ambiguousMessageReasons.size - this.unreadableSurfaceMessageIds.size;
     const ambiguousReason = fault
       ? faultCount === 1
@@ -4700,6 +4789,7 @@ export class CodexBridge {
       pendingMessageId: pendingAmbiguity?.[0] ?? null,
       modelTransportState: this.appServerRecoveryFuse.status.modelTransportState,
       appServerRecoveryFuseGeneration: this.appServerRecoveryFuse.status.fuseGeneration,
+      rollout,
       degradedReason:
         this.hubSocketUnavailableReason ??
         this.hubHttpUnavailableReason ??
@@ -4710,7 +4800,9 @@ export class CodexBridge {
         this.degradedReason ??
         (this.pendingDeliveryStates.size > 0
           ? `${this.pendingDeliveryStates.size} confirmed delivery state write(s) pending`
-          : null),
+          : null) ??
+        // Last, because it is the slowest-moving of these and should not mask a live fault.
+        (rollout.state === "RETIRE" ? rollout.reason : null),
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -5002,6 +5094,10 @@ export class CodexBridge {
     }
     this.heartbeatSequence = sequence;
     this.session = updatedSession;
+    // Sampled here as well as around a read, because the user's own conversation grows the rollout
+    // whether or not this Bridge delivers anything. Without it, an idle Bridge would only find out
+    // how large the thread had become when a confirmation read finally failed.
+    this.observeRolloutSize();
     // A successor CONTROL ticket must prove liveness before its local cutover commits, but it must
     // not settle predecessor delivery state, reconcile messages, or schedule any model-visible work.
     // MODEL_READY hydration owns those transitions using successor-bound Hub provenance.
