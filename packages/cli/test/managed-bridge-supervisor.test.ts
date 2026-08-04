@@ -26,8 +26,8 @@ function identity(overrides: Partial<ManagedBridgeIdentity> = {}): ManagedBridge
     agentId: "codex",
     runId: "run_supervisor",
     originalThreadId: "thr_original",
-    projectRoot: "R:\\Project_All\\project",
-    entry: "R:\\Project_All\\ayanamiAgent Hub\\packages\\codex-bridge\\dist\\cli.js",
+    projectRoot: "C:\\work\\demo-project",
+    entry: "C:\\work\\crossagent-hub\\packages\\codex-bridge\\dist\\cli.js",
     build: {
       buildId: "1".repeat(64),
       buildSessionId: "123e4567-e89b-42d3-a456-426614174000",
@@ -779,7 +779,7 @@ describe("ManagedBridgeSupervisor", () => {
     const activeSubjects = new MemoryActiveSubjects();
     const previous = identity();
     const candidate = identity({
-      entry: "R:\\Project_All\\ayanamiAgent Hub\\releases\\candidate\\cli.js",
+      entry: "C:\\work\\crossagent-hub\\releases\\candidate\\cli.js",
       build: {
         buildId: "5".repeat(64),
         buildSessionId: "123e4567-e89b-42d3-a456-426614174001",

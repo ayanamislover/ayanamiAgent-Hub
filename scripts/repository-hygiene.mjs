@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, extname, resolve } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import ts from "typescript";
@@ -183,6 +184,37 @@ for (const file of trackedFiles.filter((name) => name.endsWith(".md"))) {
   for (const [index, line] of lines.entries()) {
     if (credentialInUrl.test(line)) {
       problems.push(`${file}:${index + 1} documents a credential in a URL: ${line.trim()}`);
+    }
+  }
+}
+
+// Twenty-two test fixtures carried the author's own checkout directory as a session cwd, which is
+// not test data but the layout of one machine. Fixtures legitimately need Windows absolute paths,
+// so what is refused here is not the shape but the identity: where this clone sits and which
+// account runs it, both read at runtime so a contributor gets their own paths refused rather than
+// someone else's spelling. Sources escape their separators, so each line is compared collapsed too
+// -- which is also why this comment names no path.
+const machinePaths = [repositoryRoot, homedir()].map((path) => path.toLowerCase());
+const textExtensions = new Set([
+  ...codeExtensions,
+  ".cmd",
+  ".json",
+  ".md",
+  ".ps1",
+  ".sh",
+  ".sql",
+  ".txt",
+  ".yaml",
+  ".yml",
+]);
+for (const file of trackedFiles.filter((name) => textExtensions.has(extname(name).toLowerCase()))) {
+  const lines = readFileSync(resolve(repositoryRoot, file), "utf8").split(/\r?\n/);
+  for (const [index, line] of lines.entries()) {
+    const collapsed = line.replaceAll("\\\\", "\\").toLowerCase();
+    for (const machinePath of machinePaths) {
+      if (collapsed.includes(machinePath)) {
+        problems.push(`${file}:${index + 1} carries a local machine path: ${machinePath}`);
+      }
     }
   }
 }

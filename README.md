@@ -1,4 +1,4 @@
-# ayanamiAgent Hub
+# CrossAgent Hub
 
 **English** · [简体中文](./README.zh-CN.md)
 
@@ -12,7 +12,9 @@ exchange acknowledged messages, and review immutable code snapshots. The Hub nev
 itself and never stores a model's private reasoning — both agents keep their own runtime, and what
 they share is identity, state, and an event stream that either can replay after a disconnect.
 
-Protocol, CLI and packages are named CrossAgent: `crossagent`, `@crossagent/*`.
+Built by [ayanamislover](https://github.com/ayanamislover). The product, the protocol, the CLI and
+the packages are all CrossAgent — `crossagent`, `@crossagent/*`. Only the repository is still named
+`ayanamiAgent-Hub`, so clone URLs and badge links keep that spelling.
 
 ## What it looks like
 

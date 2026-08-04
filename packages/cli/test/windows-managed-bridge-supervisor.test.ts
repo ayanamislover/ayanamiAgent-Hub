@@ -13,7 +13,7 @@ describe("Windows managed Bridge supervisor activation", () => {
   it("builds a least-privilege multi-day Task Scheduler definition with no secret arguments", () => {
     const xml = buildWindowsManagedBridgeTaskXml({
       nodePath: "C:\\Program Files\\nodejs\\node.exe",
-      entryPath: "R:\\Project_All\\ayanamiAgent Hub\\packages\\cli\\dist\\bin.js",
+      entryPath: "C:\\work\\crossagent-hub\\packages\\cli\\dist\\bin.js",
       dataDir: "C:\\Users\\Example\\.crossagent",
     });
 
@@ -74,7 +74,7 @@ describe("Windows managed Bridge supervisor activation", () => {
   it("rejects control characters in every Task Scheduler path before producing XML", () => {
     const valid = {
       nodePath: "C:\\Program Files\\nodejs\\node.exe",
-      entryPath: "R:\\Project_All\\ayanamiAgent Hub\\packages\\cli\\dist\\bin.js",
+      entryPath: "C:\\work\\crossagent-hub\\packages\\cli\\dist\\bin.js",
       dataDir: "C:\\Users\\Example\\.crossagent",
     };
     for (const field of ["nodePath", "entryPath", "dataDir"] as const) {

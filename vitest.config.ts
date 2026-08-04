@@ -44,7 +44,21 @@ export default defineConfig({
     // worker_threads share one process, and blocking calls in them stall the very loop that serves
     // the RPC. A forked child owns its own loop and cannot. CI pays for that in wall time, which is
     // the right trade for a signal that means something; a developer machine keeps the default.
-    ...(process.env.CI ? { pool: "forks" as const, maxWorkers: 2 } : {}),
+    //
+    // Forking alone did not settle it: a later run again passed all 1249 cases and still failed on
+    // that same reporter call. The same configuration under CI=1 passes here, on 32 cores, in 64s.
+    // So what is scarce on a four-core runner is the main process, not a worker -- it has to answer
+    // every task update while two children and the real Hubs, terminals and app-servers they spawn
+    // compete for the same cores. Both settings below hand it headroom: one child at a time, and a
+    // reporter that appends lines instead of re-rendering a live summary on every update. Neither
+    // touches what is asserted; a genuine hang still fails on the timeouts above.
+    ...(process.env.CI
+      ? {
+          pool: "forks" as const,
+          maxWorkers: 1,
+          reporters: [["default", { summary: false }] as const],
+        }
+      : {}),
     env: {
       TMP: canonicalTmpdir,
       TEMP: canonicalTmpdir,

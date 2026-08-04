@@ -1,4 +1,4 @@
-# ayanamiAgent Hub
+# CrossAgent Hub
 
 [English](./README.md) · **简体中文**
 
@@ -11,7 +11,9 @@
 代码快照做评审。Hub 自身从不调用模型，也不保存模型的私有推理——两个 Agent 各自保留自己的运行时，它们
 共享的是身份、状态，以及一条断线后任意一方都能重放的事件流。
 
-协议、CLI 与包名统一为 CrossAgent：`crossagent`、`@crossagent/*`。
+作者 [ayanamislover](https://github.com/ayanamislover)。产品名、协议、CLI 与包名统一为
+CrossAgent——`crossagent`、`@crossagent/*`。只有仓库名仍是 `ayanamiAgent-Hub`，所以克隆地址和徽章
+链接保留这个拼写。
 
 ## 界面长什么样
 
