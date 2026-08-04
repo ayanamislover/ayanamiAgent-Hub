@@ -36,12 +36,15 @@ export default defineConfig({
     testTimeout: 90_000,
     hookTimeout: 90_000,
     // With the timeouts raised, every one of the 1249 cases passed on the runner and the job still
-    // failed -- on `[vitest-worker]: Timeout calling "onTaskUpdate"`, a worker unable to reach the
-    // reporter. Much of this suite is synchronous better-sqlite3 work that holds a thread outright,
-    // and four of those on a four-core runner starve the main thread that answers them. Capping
-    // concurrency there trades wall time for a result that means something; a developer machine
-    // keeps the default.
-    maxWorkers: process.env.CI ? 2 : undefined,
+    // failed -- on `[vitest-worker]: Timeout calling "onTaskUpdate"`, a worker whose call to the
+    // reporter went unanswered for a minute. It surfaced after the last file finished, so nothing
+    // was actually wrong with a test; halving the worker count did not move it either.
+    //
+    // This suite loads better-sqlite3 and node-pty in almost every file. Native addons in
+    // worker_threads share one process, and blocking calls in them stall the very loop that serves
+    // the RPC. A forked child owns its own loop and cannot. CI pays for that in wall time, which is
+    // the right trade for a signal that means something; a developer machine keeps the default.
+    ...(process.env.CI ? { pool: "forks" as const, maxWorkers: 2 } : {}),
     env: {
       TMP: canonicalTmpdir,
       TEMP: canonicalTmpdir,
