@@ -1,0 +1,123 @@
+name: Release
+
+# Everything a download has to survive. CI proves the code is correct and install-smoke proves a
+# clone installs; this proves the zip a stranger downloads unpacks, verifies its own build identity,
+# starts, restarts, backs up and restores.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A release that cannot be installed from a clone is not a release.
+  install-smoke:
+    uses: ./.github/workflows/install-smoke.yml
+
+  package:
+    name: Portable package
+    needs: install-smoke
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      # Only this job writes, and only to attach artifacts to a tag that already exists.
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      # Refuses to run unless the build it is packing passes the same verification the Hub performs
+      # at startup, then writes the zip, SHA256SUMS.txt and the SBOM.
+      - name: Package
+        run: pnpm release:package
+
+      - name: Unpack into a directory that has never seen this project
+        id: unpack
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem output\release\*.zip | Select-Object -First 1
+          $target = Join-Path "${{ runner.temp }}" "portable"
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          & "$env:SystemRoot\System32\tar.exe" -x -f $zip.FullName -C $target
+          $unpacked = (Get-ChildItem -Directory $target | Select-Object -First 1).FullName
+          "root=$unpacked" >> $env:GITHUB_OUTPUT
+          "zip=$($zip.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Checksum and SBOM
+        shell: pwsh
+        run: |
+          $expected = (Get-Content output\release\SHA256SUMS.txt -Raw).Trim().Split(" ")[0]
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath "${{ steps.unpack.outputs.zip }}").Hash.ToLower()
+          if ($expected -ne $actual) { throw "SHA256SUMS.txt does not describe the zip beside it" }
+          $sbom = Get-Content (Join-Path "${{ steps.unpack.outputs.root }}" "SBOM.spdx.json") -Raw | ConvertFrom-Json
+          if ($sbom.spdxVersion -ne "SPDX-2.3") { throw "SBOM is not SPDX 2.3" }
+          if ($sbom.packages.Count -lt 2) { throw "SBOM lists no dependencies" }
+          Write-Host "checksum matches; SBOM lists $($sbom.packages.Count) packages"
+
+      # The same acceptance the clone install runs, pointed at the unpacked download. It has no
+      # node_modules from this checkout to fall back on, so a missing dependency fails here.
+      - name: Portable package acceptance
+        shell: pwsh
+        run: |
+          .\scripts\install-smoke.ps1 `
+            -HubRoot "${{ steps.unpack.outputs.root }}" `
+            -Port 4393 `
+            -DataDir "${{ runner.temp }}\portable-data"
+
+      - name: Backup and restore
+        shell: pwsh
+        env:
+          CROSSAGENT_DATA_DIR: ${{ runner.temp }}\portable-data
+        run: |
+          $cli = Join-Path "${{ steps.unpack.outputs.root }}" "packages\cli\dist\bin.js"
+          $backup = "${{ runner.temp }}\portable-backup"
+          $created = & node $cli backup create $backup | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "backup create failed" }
+          if ($created.databaseBytes -le 0) { throw "the backup holds an empty database" }
+          $restored = & node $cli backup restore $backup | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "backup restore failed" }
+          Write-Host "restored $($restored.database) from $($restored.source)"
+          # A restore is only proven by the Hub reading what it produced.
+          & node $cli start --port 4393 | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "the Hub did not start on the restored database" }
+          $health = Invoke-RestMethod -Uri "http://127.0.0.1:4393/api/health" -TimeoutSec 15
+          if (-not $health.ok) { throw "the restored Hub is unhealthy" }
+          & node $cli stop | Out-Null
+
+      - name: Upload the release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: portable-win-x64
+          path: |
+            output/release/*.zip
+            output/release/SHA256SUMS.txt
+          retention-days: 30
+          if-no-files-found: error
+
+      # Only a tag publishes. A manual run is how the gate is exercised without announcing anything.
+      - name: Attach the artifacts to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.ref_name }}" `
+            (Get-ChildItem output\release\*.zip).FullName `
+            output\release\SHA256SUMS.txt `
+            --clobber

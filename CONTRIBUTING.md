@@ -66,6 +66,16 @@ pnpm test
 pnpm test:e2e
 ```
 
+A pull request runs exactly that far. Merging to main additionally runs `pnpm smoke:cli`,
+`pnpm smoke:review` and the browser suite, plus a clean-install acceptance that installs from
+scratch and starts, restarts and stops a Hub. Benchmark and dependency audit run nightly, and the
+portable package is unpacked, started and restored from a backup at release. A change that only
+touches `docs/` or a `.md` file runs the two checks that can still fail on prose and nothing else.
+
+PR 只跑到上面这一步。合入 main 会额外跑 `pnpm smoke:cli`、`pnpm smoke:review`、浏览器套件，以及一次
+从零安装并完成启动/重启/停止的验收。基准测试与依赖审计在 nightly 跑；便携包会在 release 时解压、启动
+并从备份恢复一次。只改 `docs/` 或 `.md` 的变更只跑那两项在散文上仍可能失败的检查。
+
 `pnpm lint` runs `scripts/repository-hygiene.mjs` before ESLint. It fails a change that:
 
 - tracks a generated or runtime artifact (`dist/`, `output/`, `*.db`, `*.log`, …);
@@ -73,7 +83,8 @@ pnpm test:e2e
 - writes a no-op package script;
 - documents a credential inside a URL in any tracked Markdown file;
 - carries your own checkout directory or home directory into a tracked text file. Test fixtures do
-  need Windows absolute paths — use a neutral one, not the machine you are sitting at.
+  need Windows absolute paths — use a neutral one, not the machine you are sitting at;
+- leaves a relative Markdown link pointing at a path that does not exist.
 
 `pnpm lint` 会先运行 `scripts/repository-hygiene.mjs`，再运行 ESLint。以下情况会直接失败：跟踪了生成
 物或运行时产物；声明了没人 import 的直接依赖，或没人使用的 workspace 库；写了空转的 package script；

@@ -1,0 +1,87 @@
+name: Install smoke
+
+# CI proves the code is correct. This proves the thing a person downloads actually installs and
+# runs: clone, install, start, look at it, restart, stop -- on a machine that has never seen this
+# project, with a data directory that does not exist yet.
+#
+# It runs twice, because the launcher picks its package manager at runtime and the branch it picks
+# is the branch nobody tests. The first job has pnpm on PATH. The second deletes the pnpm and
+# Corepack shims so the only remaining route is `npx pnpm@<pinned>`, which is what a machine with
+# nothing but Node does.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: install-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install via ${{ matrix.route }}
+    runs-on: windows-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        route: [pnpm, npx]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.13.0
+
+      # Deleting the shims rather than filtering PATH: the launcher uses Get-Command, which searches
+      # more than the PATH string this step can edit, and a route that is merely hidden is not the
+      # route a bare machine has.
+      - name: Remove every package manager except npx
+        if: matrix.route == 'npx'
+        shell: pwsh
+        run: |
+          foreach ($name in @("pnpm", "corepack")) {
+            Get-Command $name -All -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "removing $($_.Source)"
+              Remove-Item -LiteralPath $_.Source -Force -ErrorAction SilentlyContinue
+            }
+          }
+          if (Get-Command pnpm -ErrorAction SilentlyContinue) { throw "pnpm is still reachable" }
+          if (Get-Command corepack -ErrorAction SilentlyContinue) { throw "corepack is still reachable" }
+          if (-not (Get-Command npx -ErrorAction SilentlyContinue)) { throw "npx is unavailable" }
+
+      # The documented install path, run exactly as the README tells a reader to run it. It installs
+      # dependencies, takes the root BUILD lock and builds every component.
+      - name: scripts/install.ps1
+        shell: pwsh
+        run: .\scripts\install.ps1
+
+      - name: Clean install acceptance
+        shell: pwsh
+        run: .\scripts\install-smoke.ps1 -Port 4392 -DataDir "${{ runner.temp }}\crossagent-install-smoke"
+
+      # Only the pnpm route can reach the workspace scripts; the npx route deliberately has no
+      # package manager left. The demo seed is what the README's screenshots come from, so a break
+      # here means the first thing a new reader tries is broken.
+      - name: Seed the demo database
+        if: matrix.route == 'pnpm'
+        shell: pwsh
+        env:
+          CROSSAGENT_DATA_DIR: ${{ runner.temp }}\crossagent-demo
+        run: pnpm demo
+
+      - name: Upload the Hub log on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: install-smoke-${{ matrix.route }}-log
+          path: ${{ runner.temp }}\crossagent-install-smoke\hub.log
+          retention-days: 7
+          if-no-files-found: ignore

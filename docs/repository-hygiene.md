@@ -23,7 +23,9 @@ test, commit, immutable artifact, or reproducible procedure.
 
 ```powershell
 # Fails on tracked generated/log/database artifacts, no-op package gates,
-# unused direct runtime dependencies, unconsumed libraries, or >50 work-log entries.
+# unused direct runtime dependencies, unconsumed libraries, >50 work-log entries,
+# a credential written into a URL in tracked Markdown, a local machine path in a
+# tracked text file, or a relative Markdown link that no longer resolves.
 pnpm hygiene
 
 # Dry-run: prints exact directories, file counts, and bytes.

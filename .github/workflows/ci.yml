@@ -3,13 +3,24 @@ name: CI
 # Windows is the supported platform (see README "Platform support"), so the gate that decides
 # whether a change is good runs there. The macOS and Linux branches in the code are not covered
 # here, which matches how honestly they are described in the README.
+#
+# The work is layered by what it can tell you. A pull request pays for the checks that decide
+# whether the change is correct. Pushing to main additionally pays for the ones that need a running
+# Hub. Slow, environmental work lives in nightly.yml, and everything a downloaded artifact has to
+# survive lives in release.yml. A change that only touches prose skips all of it except the two
+# checks that can still fail on prose.
+#
+# Actions are pinned to a commit rather than a tag: a tag is mutable, and these run with the
+# repository checked out.
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+# Push now only listens to main. A branch pushed inside this repository and then opened as a pull
+# request used to start two identical runs.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -18,21 +29,80 @@ permissions:
   contents: read
 
 jobs:
+  scope:
+    name: Scope
+    # Decides which files changed. It runs no project code, so it does not need the supported
+    # platform, and a Linux runner starts in a fraction of the time.
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        shell: bash
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # Anything that is not clearly prose is treated as code, including an unresolvable base.
+          # The failure mode of guessing wrong here is a change that skipped the gate.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$BASE" "${{ github.sha }}")
+          echo "changed files:"
+          echo "$changed"
+          if [ -z "$changed" ] || echo "$changed" | grep -qvE '^(docs/|LICENSE$|.*\.md$)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  docs:
+    name: Docs
+    needs: scope
+    if: needs.scope.outputs.code == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: pnpm format:check
+
+      # Repository hygiene is what can still fail on prose: a credential written into a URL, a local
+      # machine path, a relative link that no longer resolves.
+      - name: Lint
+        run: pnpm lint
+
   verify:
     name: Verify
+    needs: scope
+    if: needs.scope.outputs.code == 'true'
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Reads the version straight from the `packageManager` field, so the pin has one home. Not
       # Corepack: the copy bundled with Node carries npm signing keys that no longer verify
       # ("Cannot find matching keyid"), and it fails before it ever reads the pin.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       # The exact floor package.json declares, so that the declared minimum is the version actually
       # proven to work rather than whatever happens to be current.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22.13.0
           cache: pnpm
@@ -57,18 +127,30 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Everything below needs a Hub that actually starts, which is the part a pull request does not
+      # pay for.
+      - name: Command-line smoke
+        if: github.event_name != 'pull_request'
+        run: pnpm smoke:cli
+
+      - name: Review gate smoke
+        if: github.event_name != 'pull_request'
+        run: pnpm smoke:review
+
       # Seeds a clean data directory by enrolling both Adapters through the real ticket flow, so it
       # depends on nothing left over from an earlier run. Needs the build above: the suite starts the
       # Hub from apps/hub/dist and serves apps/dashboard/dist.
       - name: Install Playwright browsers
+        if: github.event_name != 'pull_request'
         run: pnpm --filter @crossagent/dashboard exec playwright install --with-deps chromium
 
       - name: End-to-end
+        if: github.event_name != 'pull_request'
         run: pnpm test:e2e
 
       - name: Upload end-to-end failure evidence
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-results
           path: output/playwright/test-results

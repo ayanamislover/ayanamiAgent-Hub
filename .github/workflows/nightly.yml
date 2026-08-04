@@ -1,0 +1,62 @@
+name: Nightly
+
+# Work that is too slow or too environmental to sit in front of a change, but that still has to
+# fail somewhere. A dependency advisory published today is nobody's pull request, and a benchmark
+# regression is not visible from a diff.
+
+on:
+  schedule:
+    # 18:00 UTC, which is early morning in the timezone this is developed in -- the results are
+    # waiting rather than arriving mid-session.
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deep:
+    name: Deep verification
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @crossagent/dashboard exec playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: pnpm test:e2e
+
+      # Not a pass/fail threshold -- the numbers are the record. A regression shows as a step change
+      # against yesterday's run rather than against a figure somebody guessed once.
+      - name: Benchmark
+        run: pnpm benchmark
+
+      # This is the one that only makes sense on a clock. An advisory published against a dependency
+      # that has not moved does not touch the repository, so nothing else would ever notice it.
+      - name: Dependency audit
+        run: pnpm audit --audit-level moderate
+
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nightly-results
+          path: output/playwright/test-results
+          retention-days: 14
+          if-no-files-found: ignore

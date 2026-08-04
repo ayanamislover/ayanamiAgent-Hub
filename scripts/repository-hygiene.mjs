@@ -219,6 +219,28 @@ for (const file of trackedFiles.filter((name) => textExtensions.has(extname(name
   }
 }
 
+// Reordering the README moved half a dozen sections and every relative link had to follow. Nothing
+// checked them, and a dead link in the file that is a project's front door is the cheapest possible
+// thing to get wrong. Only local targets are resolved: an external URL needs the network, and a
+// network check that fails on someone else's outage is not a gate.
+const markdownLink = /(?:\]\(\s*([^)\s]+)|^\s*\[[^\]]+\]:\s*(\S+))/gmu;
+for (const file of trackedFiles.filter((name) => name.endsWith(".md"))) {
+  const source = readFileSync(resolve(repositoryRoot, file), "utf8")
+    // A fenced block can hold a command whose argument looks exactly like a link target.
+    .replaceAll(/^```[\s\S]*?^```/gmu, "");
+  const directory = dirname(resolve(repositoryRoot, file));
+  for (const match of source.matchAll(markdownLink)) {
+    const target = match[1] ?? match[2];
+    if (!target || /^(?:[a-z][a-z0-9+.-]*:|#|<)/iu.test(target)) continue;
+    const [path] = target.split(/[#?]/u);
+    if (!path) continue;
+    const resolved = path.startsWith("/")
+      ? resolve(repositoryRoot, `.${path}`)
+      : resolve(directory, decodeURIComponent(path));
+    if (!existsSync(resolved)) problems.push(`${file} links to a missing path: ${target}`);
+  }
+}
+
 if (problems.length > 0) {
   console.error("Repository hygiene failed:");
   for (const problem of problems) console.error(`- ${problem}`);
