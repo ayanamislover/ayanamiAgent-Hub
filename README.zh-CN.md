@@ -2,61 +2,63 @@
 
 [English](./README.md) · **简体中文**
 
-ayanamiAgent Hub（协议名：CrossAgent Hub）是一个本地优先的 Codex × Claude 协作中枢。它让两个独立 Agent 共享项目身份、任务、TODO、消息、写入意图、审查证据和可重放事件流；Hub 自身不调用模型，也不保存模型私有推理。
+[![CI](https://github.com/ayanamislover/ayanamiAgent-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/ayanamislover/ayanamiAgent-Hub/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-informational)
+![Status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-```mermaid
-flowchart LR
-  CX["Codex<br/>app-server"]
-  CL["Claude<br/>stdio MCP"]
-  CB["Codex Bridge"]
-  CH["Claude Channel"]
+一个本地优先的控制平面，让 Codex 与 Claude 协调任务、避免写入冲突、交换需要确认的消息，并对不可变的
+代码快照做评审。Hub 自身从不调用模型，也不保存模型的私有推理——两个 Agent 各自保留自己的运行时，它们
+共享的是身份、状态，以及一条断线后任意一方都能重放的事件流。
 
-  subgraph HUB["CrossAgent Hub · 127.0.0.1:4387"]
-    direction TB
-    SVC["REST · WebSocket · 16 个 MCP 工具"]
-    DOM["任务 · 消息 · 写入意图<br/>review bundle · 在线状态"]
-    DB[("SQLite WAL<br/>只追加事件流")]
-    SVC --- DOM --- DB
-  end
+协议、CLI 与包名统一为 CrossAgent：`crossagent`、`@crossagent/*`。
 
-  UI["React Dashboard"]
-  GIT["隔离的 review worktree"]
+## 界面长什么样
 
-  CX <-->|"stdio 上的 JSON-RPC"| CB
-  CL <-->|"stdio MCP"| CH
-  CB <-->|"鉴权 WebSocket"| SVC
-  CH <-->|"鉴权 WebSocket"| SVC
-  UI <--> SVC
-  DOM <--> GIT
+下面每一张截图都是 `pnpm demo` 种出来的一次性 demo，不涉及任何真实项目。
 
-  classDef agent fill:#1f2937,stroke:#4b5563,color:#f9fafb
-  classDef hub fill:#0f2f3f,stroke:#2563eb,color:#f9fafb
-  class CX,CL agent
-  class SVC,DOM,DB hub
+![Overview：当前目标、双方 agent 状态、实时事件流](docs/assets/dashboard-overview.png)
+
+_Overview——当前目标、两个 agent 各自的状态，以及事件流的实时到达情况。_
+
+![Review bundle：base/head SHA、patch 哈希、作者、评审方与 finding](docs/assets/dashboard-reviews.png)
+
+_Reviews——每个 bundle 冻结 base 与 head SHA、patch 哈希，以及针对它开出的 finding。只要还有 blocking
+finding 未关闭，需要 review 的任务就到不了 `DONE`。_
+
+![Communications：带优先级、类型与投递状态的消息线程](docs/assets/dashboard-communications.png)
+
+_Communications——优先级决定一条消息如何抵达正在忙的 agent；投递状态只由显式 ACK 推进，传输写成功不算。_
+
+## 三个不一样的地方
+
+**投递是证实出来的，不是假定的。** 传输写成功从不等同于送达。Bridge 只有在从对端读回相互对应的证据
+之后，才把接收方推进到 `DELIVERED`；在被实测的那个 Codex CLI 上无法确认的那些通路，会停在 `PENDING`
+并保持可重放，而不是被报成已送达。
+
+**评审留下的是证据，不是对话。** 一个 review bundle 会冻结 base SHA、head SHA 和 patch 哈希。finding
+针对这个冻结的快照开出，可以 checkout 到隔离的 worktree 里查看；只要还有 blocking finding 未关闭，
+需要 review 的任务就到不了 `DONE`。
+
+**能力是探测出来的，不是推断的。** Agents 页面展示的是每个会话实际探测到的传输方式与能力，而不是从
+客户端版本号猜出来的，所以某个 agent 的 CLI 掉了某项功能时会显示为降级，而不是静默失效。
+
+## 没有两个 Agent 也能先看看
+
+```bash
+pnpm demo
 ```
 
-Hub 从不调用模型。两个 Agent 各自保留自己的运行时；它们共享的是身份、状态，以及一条断线后任意一方都能
-重放的事件流。
+会在 `output/demo` 下生成一个一次性 Hub，里面是一段完整的 Codex × Claude 协作：三轮 review、三种
+严重度的 finding，以及围绕它们的消息线程。内容取自构建本项目时使用的私有开发工作区并做过脱敏，其中特意
+保留了一轮「评审方量错了、主动撤回自己开出的 blocking」。
 
-## 能做什么
+脚本会打印启动命令。如果你自己的 Hub 正在跑，需要先停掉——一个已构建的工作区只持有一份 Hub 运行租
+约，换端口、换数据目录都不够。你自己的数据库不会被打开，删掉 `output/demo` 即可彻底移除该 demo。
 
-- Fastify + SQLite WAL Hub，REST、鉴权 WebSocket 与 16 个 Streamable HTTP MCP 工具。
-- Codex app-server Bridge：线程启动/恢复、turn steer/inject、真实 adapter activity 和 priority push。
-- Claude custom Channel：stdio MCP、断线补发、去重、显式 ACK/processed/reply、主动发消息与 inbox。
-- Codex/Claude hooks fallback：普通 CLI 会话也能登记、收取 action-required 消息和回写生命周期。
-- React Dashboard：Overview、Tasks、Communications、Reviews、Agents、Conflicts、Audit、Settings。
-- 原子任务认领、确定性进度、离线 mailbox、write-intent 冲突、不可变 review bundle、独立 worktree 审查。
-- doctor、脱敏 diagnostics、migration 前备份、手动 backup/restore。
-
-Hub 默认只监听 `127.0.0.1:4387`。这里没有"一个 bearer token"：Dashboard、adapter bootstrap、capture、injection 各持有一份独立凭据，都放在用户目录的 `.crossagent` 下，各自带自己的 scope。Dashboard 用的是 `.crossagent/dashboard-token`，本机 Dashboard 会自动把它换成 HttpOnly cookie，不显示登录页。Agent 的数据平面从不使用该凭据——它走的是按会话签发的 session ticket。
-
-需要共享机器上的显式 Dashboard 登录门时，设置 `CROSSAGENT_DASHBOARD_AUTH=required`，并通过 `crossagent open` 的一次性 launch code 或 Dashboard token 登录。该开关不影响 Agent、Bridge、REST、WebSocket 或 MCP 的凭据与 scope 校验；关闭 Dashboard 登录门也只允许用于 loopback 监听。
-
-## 平台支持
-
-**以 Windows 为主。** 本项目在 Windows 10/11 + PowerShell 上开发与验证。托管 Bridge 的单例依赖 Windows 命名管道，凭据文件用 Windows ACL 保护，一键脚本是 `.cmd`。
-
-下面的 macOS / Linux 步骤确实存在、代码里也有平台分支，但那些路径未经常规测试，且单例保证在那里没有对应实现。在依赖它之前请先读 [已知限制](docs/known-limitations.md)——Hook 生命周期与静态凭据轮换的缺口也都如实写在那一页。
+自己用一段时间之后，`pnpm collab:stats` 与 `pnpm review:stats` 会为你的 Hub 打印同一类计数，只读，
+且不含消息正文、finding 标题或文件路径。本项目在自己身上跑出来的数字——71 轮 review、60 个 finding，
+以及评审规模分桶说明了什么——都在[自举结果](docs/evidence/self-hosting-results.md)。
 
 ## 安装
 
@@ -91,105 +93,6 @@ pnpm crossagent --help
 ```
 
 `better-sqlite3` 使用原生模块；若系统没有匹配的预构建包，需要 Python 与平台 C/C++ build tools。
-
-## 没有两个 Agent 也能先看看
-
-```bash
-pnpm demo
-```
-
-会在 `output/demo` 下生成一个一次性 Hub，里面是一段完整的 Codex × Claude 协作：三轮 review、三种
-严重度的 finding，以及围绕它们的消息线程。内容取自本仓库自己的协作记录并做过脱敏，其中特意保留了
-一轮「评审方量错了、主动撤回自己开出的 blocking」。
-
-脚本会打印启动命令。如果你自己的 Hub 正在跑，需要先停掉——一个已构建的工作区只持有一份 Hub 运行租
-约，换端口、换数据目录都不够。你自己的数据库不会被打开，删掉 `output/demo` 即可彻底移除该 demo。
-
-下面这些就是上面那条命令种出来的 demo，不涉及任何真实项目。
-
-![Overview：当前目标、双方 agent 状态、实时事件流](docs/assets/dashboard-overview.png)
-
-_Overview——当前目标、两个 agent 各自的状态，以及事件流的实时到达情况。_
-
-![Review bundle：base/head SHA、patch 哈希、作者、评审方与 finding](docs/assets/dashboard-reviews.png)
-
-_Reviews——每个 bundle 冻结 base 与 head SHA、patch 哈希，以及针对它开出的 finding。只要还有 blocking
-finding 未关闭，需要 review 的任务就到不了 `DONE`。_
-
-![Communications：带优先级、类型与投递状态的消息线程](docs/assets/dashboard-communications.png)
-
-_Communications——优先级决定一条消息如何抵达正在忙的 agent；投递状态只由显式 ACK 推进，传输写成功不算。_
-
-用一段时间之后，可以对自己的 Hub 跑同一份统计：
-
-```bash
-pnpm collab:stats
-```
-
-它以只读方式读数据库，只输出计数——多少轮 review 提出了 finding、方向如何、属于哪一类、还有多少没
-关闭。不会打印任何消息正文、finding 标题或文件路径。但它会原样打印数据库路径和你的 agent id——方向
-统计的意义就在于点名谁 review 了谁。往公开场合贴之前先看这两处：agent id 是你自己起的名字。
-
-对 demo 数据库跑，输出是这样：
-
-```text
-CrossAgent collaboration log -- ~/.crossagent/crossagent.db
-  span                   1 active days
-  review rounds          3 (0 self-reviewed)
-  findings filed         3
-  rounds that caught something  3 of 3 (100%)
-  -> one defect named every 1.0 handoffs
-  author resubmitted     0 times after a review
-  volume                 10 messages, 3 tasks, 39 events
-
-Direction (who reviewed whom)
-  claude reviewing codex: 2 rounds, 2 findings, caught something in 100%
-  codex reviewing claude: 1 rounds, 1 findings, caught something in 100%
-
-What the findings were about
-  security         1
-  maintainability  1
-  correctness      1
-
-How severe, and what happened to them
-  info         1 filed, 0 settled (0%)
-  high         1 filed, 0 settled (0%)
-  blocking     1 filed, 1 settled (100%)
-
-  still open: 2 findings, 0 of them blocking
-```
-
-`pnpm review:stats` 从 review 循环那一侧看同一个数据库，且完全不打印 agent id 和路径。下面是它跑在
-本仓库自身开发历史上的结果，[协作章程](docs/collaboration-charter.md)里的 review 规则就是从这些数字
-来的：
-
-```text
-71 reviews, 60 findings, 77 tasks
-2026-07-28 .. 2026-08-01
-
-Findings by category
-----------------------------------------------------------------
-  correctness             18  blocking   2 ( 11%)  ########################
-  maintainability         11  blocking   0 (  0%)  ###############
-  scope                    9  blocking   3 ( 33%)  ############
-  concurrency              9  blocking   5 ( 56%)  ############
-  test_gap                 8  blocking   0 (  0%)  ###########
-  security                 3  blocking   1 ( 33%)  ####
-  regression               2  blocking   0 (  0%)  ###
-
-Yield by review size
-----------------------------------------------------------------
-   1-5 files     24 reviews    57 files   19 findings (0.8/review, 0.333/file)   0 blocking
-   6-20 files    37 reviews   452 files   34 findings (0.9/review, 0.075/file)  10 blocking
-  21-50 files     7 reviews   186 files    5 findings (0.7/review, 0.027/file)   1 blocking
-  50+ files       3 reviews   286 files    2 findings (0.7/review, 0.007/file)   0 blocking
-
-  a file in the 1-5 bucket gets 48x the scrutiny of one in the 50+ bucket
-```
-
-每轮 review 提出的 finding 数几乎不随规模变化——落在哪个桶里都是 0.7 到 0.9。快照变大不会让 review 变
-细致，只会变稀，所以开 review 的那个 MCP 工具要求改动文件数控制在 20 个以内。两个统计脚本都认
-`CROSSAGENT_DATA_DIR`，可以直接指向 demo。
 
 ## 五分钟启动
 
@@ -241,7 +144,9 @@ crossagent hooks install codex .
 
 首次加入项目时，Hub 读取 `.crossagent/project.json`，以稳定 `project_id` 合并同一仓库的多个 worktree。
 
-## 三种交付能力
+## 工作原理
+
+### 三种交付能力
 
 | 模式                                         | 主动发消息         | 在线被动推送                 | 离线补发               | ACK / processed    |
 | -------------------------------------------- | ------------------ | ---------------------------- | ---------------------- | ------------------ |
@@ -297,6 +202,53 @@ sequenceDiagram
 codex-cli 0.145.0 上无法确认的那两个投递面，记在
 [已知限制](docs/known-limitations.md)里，连同各自的探针证据。
 
+## 架构
+
+```mermaid
+flowchart LR
+  CX["Codex<br/>app-server"]
+  CL["Claude<br/>stdio MCP"]
+  CB["Codex Bridge"]
+  CH["Claude Channel"]
+
+  subgraph HUB["CrossAgent Hub · 127.0.0.1:4387"]
+    direction TB
+    SVC["REST · WebSocket · 16 个 MCP 工具"]
+    DOM["任务 · 消息 · 写入意图<br/>review bundle · 在线状态"]
+    DB[("SQLite WAL<br/>只追加事件流")]
+    SVC --- DOM --- DB
+  end
+
+  UI["React Dashboard"]
+  GIT["隔离的 review worktree"]
+
+  CX <-->|"stdio 上的 JSON-RPC"| CB
+  CL <-->|"stdio MCP"| CH
+  CB <-->|"鉴权 WebSocket"| SVC
+  CH <-->|"鉴权 WebSocket"| SVC
+  UI <--> SVC
+  DOM <--> GIT
+
+  classDef agent fill:#1f2937,stroke:#4b5563,color:#f9fafb
+  classDef hub fill:#0f2f3f,stroke:#2563eb,color:#f9fafb
+  class CX,CL agent
+  class SVC,DOM,DB hub
+```
+
+- Fastify + SQLite WAL Hub，REST、鉴权 WebSocket 与 16 个 Streamable HTTP MCP 工具。
+- Codex app-server Bridge：线程启动/恢复、turn steer/inject、真实 adapter activity 和 priority push。
+- Claude custom Channel：stdio MCP、断线补发、去重、显式 ACK/processed/reply、主动发消息与 inbox。
+- Codex/Claude hooks fallback：普通 CLI 会话也能登记、收取 action-required 消息和回写生命周期。
+- React Dashboard：Overview、Tasks、Communications、Reviews、Agents、Conflicts、Audit、Settings。
+- 原子任务认领、确定性进度、离线 mailbox、write-intent 冲突、不可变 review bundle、独立 worktree 审查。
+- doctor、脱敏 diagnostics、migration 前备份、手动 backup/restore。
+
+## 平台支持
+
+**以 Windows 为主。** 本项目在 Windows 10/11 + PowerShell 上开发与验证。托管 Bridge 的单例依赖 Windows 命名管道，凭据文件用 Windows ACL 保护，一键脚本是 `.cmd`。
+
+上面的 macOS / Linux 步骤确实存在、代码里也有平台分支，但那些路径未经常规测试，且单例保证在那里没有对应实现。在依赖它之前请先读 [已知限制](docs/known-limitations.md)——Hook 生命周期与静态凭据轮换的缺口也都如实写在那一页。
+
 ## 常用命令
 
 ```text
@@ -350,6 +302,7 @@ overview 与 FTS 搜索做可重复门限检查。
 - [架构](docs/architecture.md)
 - [协议](docs/protocol.md)
 - [已知限制](docs/known-limitations.md)
+- [自举结果](docs/evidence/self-hosting-results.md)
 - [故障排查](docs/troubleshooting.md)
 - [仓库文件与清理规则](docs/repository-hygiene.md)
 - [Windows 一键启动与双端通信](docs/windows-one-click.md)
@@ -360,6 +313,10 @@ overview 与 FTS 搜索做可重复门限检查。
 示例协作规则与项目配置见 [`examples/`](examples/)。
 
 ## 安全边界
+
+Hub 默认只监听 `127.0.0.1:4387`。这里没有"一个 bearer token"：Dashboard、adapter bootstrap、capture、injection 各持有一份独立凭据，都放在用户目录的 `.crossagent` 下，各自带自己的 scope。Dashboard 用的是 `.crossagent/dashboard-token`，本机 Dashboard 会自动把它换成 HttpOnly cookie，不显示登录页。Agent 的数据平面从不使用该凭据——它走的是按会话签发的 session ticket。
+
+需要共享机器上的显式 Dashboard 登录门时，设置 `CROSSAGENT_DASHBOARD_AUTH=required`，并通过 `crossagent open` 的一次性 launch code 或 Dashboard token 登录。该开关不影响 Agent、Bridge、REST、WebSocket 或 MCP 的凭据与 scope 校验；关闭 Dashboard 登录门也只允许用于 loopback 监听。
 
 - 默认 loopback 监听；若改为非 loopback，Hub 会拒绝不安全配置。
 - REST、WebSocket、MCP 均需 token；浏览器只接受 localhost Origin。

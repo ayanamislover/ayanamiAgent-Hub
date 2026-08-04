@@ -2,82 +2,71 @@
 
 **English** · [简体中文](./README.zh-CN.md)
 
-ayanamiAgent Hub (protocol name: CrossAgent Hub) is a local-first collaboration hub for Codex ×
-Claude. It lets two independent agents share project identity, tasks, TODOs, messages, write
-intents, review evidence and a replayable event stream. The Hub never calls a model itself and
-never stores a model's private reasoning.
+[![CI](https://github.com/ayanamislover/ayanamiAgent-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/ayanamislover/ayanamiAgent-Hub/actions/workflows/ci.yml)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-informational)
+![Status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
-```mermaid
-flowchart LR
-  CX["Codex<br/>app-server"]
-  CL["Claude<br/>stdio MCP"]
-  CB["Codex Bridge"]
-  CH["Claude Channel"]
+A local-first control plane that lets Codex and Claude coordinate tasks, prevent write conflicts,
+exchange acknowledged messages, and review immutable code snapshots. The Hub never calls a model
+itself and never stores a model's private reasoning — both agents keep their own runtime, and what
+they share is identity, state, and an event stream that either can replay after a disconnect.
 
-  subgraph HUB["CrossAgent Hub · 127.0.0.1:4387"]
-    direction TB
-    SVC["REST · WebSocket · 16 MCP tools"]
-    DOM["tasks · messages · write intents<br/>review bundles · presence"]
-    DB[("SQLite WAL<br/>append-only events")]
-    SVC --- DOM --- DB
-  end
+Protocol, CLI and packages are named CrossAgent: `crossagent`, `@crossagent/*`.
 
-  UI["React Dashboard"]
-  GIT["Isolated review worktrees"]
+## What it looks like
 
-  CX <-->|"JSON-RPC over stdio"| CB
-  CL <-->|"stdio MCP"| CH
-  CB <-->|"authenticated WebSocket"| SVC
-  CH <-->|"authenticated WebSocket"| SVC
-  UI <--> SVC
-  DOM <--> GIT
+Every screenshot below is the disposable demo that `pnpm demo` seeds, not a real project.
 
-  classDef agent fill:#1f2937,stroke:#4b5563,color:#f9fafb
-  classDef hub fill:#0f2f3f,stroke:#2563eb,color:#f9fafb
-  class CX,CL agent
-  class SVC,DOM,DB hub
+![Dashboard Overview: active objective, agent field state and live event log](docs/assets/dashboard-overview.png)
+
+_Overview — the active objective, both agents' field state, and the event stream as it arrives._
+
+![Review bundles with base and head SHA, patch hash, author, reviewer and findings](docs/assets/dashboard-reviews.png)
+
+_Reviews — each bundle freezes a base and head SHA, a patch hash and the findings filed against it.
+A review-required task cannot reach `DONE` while a blocking finding is open._
+
+![Communications: threaded messages with priority, kind and delivery state](docs/assets/dashboard-communications.png)
+
+_Communications — priority decides how a message reaches a busy agent; delivery state only advances
+on an explicit ACK, never on a successful transport write._
+
+## Three things that make it different
+
+**Delivery is proven, not assumed.** A transport write is never treated as delivery. The Bridge
+advances a recipient to `DELIVERED` only after reading correlated evidence back out of the peer, and
+the surfaces that cannot be confirmed on the Codex CLI it was measured against stay `PENDING` and
+replayable rather than being reported as delivered.
+
+**Review is evidence, not conversation.** A review bundle freezes a base SHA, a head SHA and a patch
+hash. Findings are filed against that frozen snapshot, checked out into an isolated worktree, and a
+review-required task cannot reach `DONE` while a blocking finding is open.
+
+**Capability is probed, not inferred.** The Agents page shows the transport and capabilities
+actually probed for each session rather than guessing them from a client version string, so an agent
+whose CLI dropped a feature shows up as degraded instead of silently failing.
+
+## Try it without two agents
+
+```bash
+pnpm demo
 ```
 
-The Hub never calls a model. Both agents keep their own runtime; what they share is identity,
-state, and an event stream that either can replay after a disconnect.
+This seeds a disposable Hub under `output/demo` with a worked Codex × Claude collaboration —
+three review rounds, findings of three severities, and the message thread around them. The content is
+taken from the private development workspace this project was built in, anonymised, including one
+round where the reviewer retracts its own blocking finding after measuring wrong.
 
-## What it does
+It prints the commands to start the Hub against that data. Stop your own Hub first if you have one
+running — a built workspace holds a single Hub runtime lease, so the port and data directory being
+different is not enough. Your own database is never opened, and deleting `output/demo` removes the
+demo entirely.
 
-- Fastify + SQLite WAL Hub, exposing REST, an authenticated WebSocket, and 16 Streamable HTTP MCP
-  tools.
-- Codex app-server Bridge: thread start and resume, turn steer and inject, real adapter activity,
-  priority push.
-- Claude custom Channel: stdio MCP, replay after a disconnect, deduplication, explicit
-  ACK/processed/reply, proactive messaging and an inbox.
-- Codex/Claude hooks fallback, so a plain CLI session can still register, receive action-required
-  messages, and write its lifecycle back.
-- React Dashboard: Overview, Tasks, Communications, Reviews, Agents, Conflicts, Audit, Settings.
-- Atomic task claiming, deterministic progress, offline mailbox, write-intent conflicts, immutable
-  review bundles, isolated worktree review.
-- `doctor`, redacted diagnostics, pre-migration backups, manual backup and restore.
-
-The Hub listens on `127.0.0.1:4387` only, by default. There is no single bearer token: the Dashboard,
-adapter bootstrap, capture and injection each hold a separate credential under `.crossagent` in your
-home directory, with its own scopes. The Dashboard's is `.crossagent/dashboard-token`, and a local
-Dashboard exchanges it for an HttpOnly cookie automatically and shows no login page. Agent
-data-plane access never uses that credential — it runs on session tickets issued per session.
-
-On a shared machine, set `CROSSAGENT_DASHBOARD_AUTH=required` for an explicit Dashboard login, using
-either a one-time launch code from `crossagent open` or the Dashboard token. That switch does not
-affect credential or scope checks for agents, Bridges, REST, WebSocket or MCP, and the login gate
-may only be disabled while listening on loopback.
-
-## Platform support
-
-**Windows-first.** This is developed and exercised on Windows 10/11 with PowerShell. The managed
-Bridge supervisor depends on a Windows named-pipe singleton, credential files are protected with
-Windows ACLs, and the one-click launchers are `.cmd` scripts.
-
-The macOS and Linux instructions below exist and the code carries platform branches, but those
-paths are not routinely tested and the supervisor's single-instance guarantee has no equivalent
-implementation there. Read [known limitations](docs/known-limitations.md) before depending on it —
-that page is also where the Hook lifecycle and static credential rotation gaps are described
-honestly.
+Once you have been using your own Hub, `pnpm collab:stats` and `pnpm review:stats` print the same
+kind of counts for it, read-only and without message bodies, finding titles or file paths. The
+numbers this project produced on itself — 71 reviews, 60 findings, and what the review-size buckets
+say about scrutiny — are in [self-hosting results](docs/evidence/self-hosting-results.md).
 
 ## Install
 
@@ -114,112 +103,6 @@ pnpm crossagent --help
 
 `better-sqlite3` is a native module. If no prebuilt binary matches your system, you will need
 Python and your platform's C/C++ build tools.
-
-## Try it without two agents
-
-```bash
-pnpm demo
-```
-
-This seeds a disposable Hub under `output/demo` with a worked Codex × Claude collaboration —
-three review rounds, findings of three severities, and the message thread around them. The content
-is taken from this repository's own collaboration log and anonymised, including one round where the
-reviewer retracts its own blocking finding after measuring wrong.
-
-It prints the commands to start the Hub against that data. Stop your own Hub first if you have one
-running — a built workspace holds a single Hub runtime lease, so the port and data directory being
-different is not enough. Your own database is never opened, and deleting `output/demo` removes the
-demo entirely.
-
-Everything below is that demo, seeded by the command above — no real project is involved.
-
-![Dashboard Overview: active objective, agent field state and live event log](docs/assets/dashboard-overview.png)
-
-_Overview — the active objective, both agents' field state, and the event stream as it arrives._
-
-![Review bundles with base and head SHA, patch hash, author, reviewer and findings](docs/assets/dashboard-reviews.png)
-
-_Reviews — each bundle freezes a base and head SHA, a patch hash and the findings filed against it.
-A review-required task cannot reach `DONE` while a blocking finding is open._
-
-![Communications: threaded messages with priority, kind and delivery state](docs/assets/dashboard-communications.png)
-
-_Communications — priority decides how a message reaches a busy agent; delivery state only advances
-on an explicit ACK, never on a successful transport write._
-
-To see the same numbers for your own Hub once you have been using it:
-
-```bash
-pnpm collab:stats
-```
-
-That reads your database read-only and prints counts — how many review rounds produced a finding,
-in which direction, of what kind, and how many are still open. It never prints a message body, a
-finding title or a file path. It does print your database path and your agent ids verbatim, because
-naming who reviewed whom is the point of the direction breakdown; check those two before pasting
-the output somewhere public, since an agent id is whatever you named it.
-
-Run against the demo database, it prints:
-
-```text
-CrossAgent collaboration log -- ~/.crossagent/crossagent.db
-  span                   1 active days
-  review rounds          3 (0 self-reviewed)
-  findings filed         3
-  rounds that caught something  3 of 3 (100%)
-  -> one defect named every 1.0 handoffs
-  author resubmitted     0 times after a review
-  volume                 10 messages, 3 tasks, 39 events
-
-Direction (who reviewed whom)
-  claude reviewing codex: 2 rounds, 2 findings, caught something in 100%
-  codex reviewing claude: 1 rounds, 1 findings, caught something in 100%
-
-What the findings were about
-  security         1
-  maintainability  1
-  correctness      1
-
-How severe, and what happened to them
-  info         1 filed, 0 settled (0%)
-  high         1 filed, 0 settled (0%)
-  blocking     1 filed, 1 settled (100%)
-
-  still open: 2 findings, 0 of them blocking
-```
-
-`pnpm review:stats` reports the same database from the review loop's side, and prints no agent id
-or path at all. Here it is on this repository's own development history, which is where the review
-guidance in [the collaboration charter](docs/collaboration-charter.md) comes from:
-
-```text
-71 reviews, 60 findings, 77 tasks
-2026-07-28 .. 2026-08-01
-
-Findings by category
-----------------------------------------------------------------
-  correctness             18  blocking   2 ( 11%)  ########################
-  maintainability         11  blocking   0 (  0%)  ###############
-  scope                    9  blocking   3 ( 33%)  ############
-  concurrency              9  blocking   5 ( 56%)  ############
-  test_gap                 8  blocking   0 (  0%)  ###########
-  security                 3  blocking   1 ( 33%)  ####
-  regression               2  blocking   0 (  0%)  ###
-
-Yield by review size
-----------------------------------------------------------------
-   1-5 files     24 reviews    57 files   19 findings (0.8/review, 0.333/file)   0 blocking
-   6-20 files    37 reviews   452 files   34 findings (0.9/review, 0.075/file)  10 blocking
-  21-50 files     7 reviews   186 files    5 findings (0.7/review, 0.027/file)   1 blocking
-  50+ files       3 reviews   286 files    2 findings (0.7/review, 0.007/file)   0 blocking
-
-  a file in the 1-5 bucket gets 48x the scrutiny of one in the 50+ bucket
-```
-
-Findings per review barely move with size — 0.7 to 0.9 whichever bucket you land in. A bigger
-snapshot is not reviewed harder, only thinner, which is why the MCP tool that opens a review asks
-for under 20 changed files. Both stats scripts honour `CROSSAGENT_DATA_DIR`, so you can point them
-at the demo.
 
 ## Five-minute start
 
@@ -274,7 +157,9 @@ crossagent hooks install codex .
 On first join the Hub reads `.crossagent/project.json` and merges several worktrees of one
 repository under a stable `project_id`.
 
-## Three delivery modes
+## How it works
+
+### Three delivery modes
 
 | Mode                                        | Proactive send     | Online push                            | Offline replay             | ACK / processed               |
 | ------------------------------------------- | ------------------ | -------------------------------------- | -------------------------- | ----------------------------- |
@@ -334,6 +219,64 @@ The two surfaces that cannot be confirmed on codex-cli 0.145.0 are documented in
 [docs/known-limitations.md](./docs/known-limitations.md) with the probe evidence. They fail toward
 safety: nothing is lost and nothing is reported delivered that was not read back.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  CX["Codex<br/>app-server"]
+  CL["Claude<br/>stdio MCP"]
+  CB["Codex Bridge"]
+  CH["Claude Channel"]
+
+  subgraph HUB["CrossAgent Hub · 127.0.0.1:4387"]
+    direction TB
+    SVC["REST · WebSocket · 16 MCP tools"]
+    DOM["tasks · messages · write intents<br/>review bundles · presence"]
+    DB[("SQLite WAL<br/>append-only events")]
+    SVC --- DOM --- DB
+  end
+
+  UI["React Dashboard"]
+  GIT["Isolated review worktrees"]
+
+  CX <-->|"JSON-RPC over stdio"| CB
+  CL <-->|"stdio MCP"| CH
+  CB <-->|"authenticated WebSocket"| SVC
+  CH <-->|"authenticated WebSocket"| SVC
+  UI <--> SVC
+  DOM <--> GIT
+
+  classDef agent fill:#1f2937,stroke:#4b5563,color:#f9fafb
+  classDef hub fill:#0f2f3f,stroke:#2563eb,color:#f9fafb
+  class CX,CL agent
+  class SVC,DOM,DB hub
+```
+
+- Fastify + SQLite WAL Hub, exposing REST, an authenticated WebSocket, and 16 Streamable HTTP MCP
+  tools.
+- Codex app-server Bridge: thread start and resume, turn steer and inject, real adapter activity,
+  priority push.
+- Claude custom Channel: stdio MCP, replay after a disconnect, deduplication, explicit
+  ACK/processed/reply, proactive messaging and an inbox.
+- Codex/Claude hooks fallback, so a plain CLI session can still register, receive action-required
+  messages, and write its lifecycle back.
+- React Dashboard: Overview, Tasks, Communications, Reviews, Agents, Conflicts, Audit, Settings.
+- Atomic task claiming, deterministic progress, offline mailbox, write-intent conflicts, immutable
+  review bundles, isolated worktree review.
+- `doctor`, redacted diagnostics, pre-migration backups, manual backup and restore.
+
+## Platform support
+
+**Windows-first.** This is developed and exercised on Windows 10/11 with PowerShell. The managed
+Bridge supervisor depends on a Windows named-pipe singleton, credential files are protected with
+Windows ACLs, and the one-click launchers are `.cmd` scripts.
+
+The macOS and Linux instructions above exist and the code carries platform branches, but those
+paths are not routinely tested and the supervisor's single-instance guarantee has no equivalent
+implementation there. Read [known limitations](docs/known-limitations.md) before depending on it —
+that page is also where the Hook lifecycle and static credential rotation gaps are described
+honestly.
+
 ## Common commands
 
 ```text
@@ -388,6 +331,7 @@ applies repeatable thresholds to REST, event publish, overview and FTS search.
 - [Architecture](docs/architecture.md)
 - [Protocol](docs/protocol.md)
 - [Known limitations](docs/known-limitations.md)
+- [Self-hosting results](docs/evidence/self-hosting-results.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Repository files and cleanup rules](docs/repository-hygiene.md)
 - [Windows one-click start](docs/windows-one-click.md)
@@ -398,6 +342,17 @@ applies repeatable thresholds to REST, event publish, overview and FTS search.
 Example collaboration rules and project configuration are in [`examples/`](examples/).
 
 ## Security boundaries
+
+The Hub listens on `127.0.0.1:4387` only, by default. There is no single bearer token: the Dashboard,
+adapter bootstrap, capture and injection each hold a separate credential under `.crossagent` in your
+home directory, with its own scopes. The Dashboard's is `.crossagent/dashboard-token`, and a local
+Dashboard exchanges it for an HttpOnly cookie automatically and shows no login page. Agent
+data-plane access never uses that credential — it runs on session tickets issued per session.
+
+On a shared machine, set `CROSSAGENT_DASHBOARD_AUTH=required` for an explicit Dashboard login, using
+either a one-time launch code from `crossagent open` or the Dashboard token. That switch does not
+affect credential or scope checks for agents, Bridges, REST, WebSocket or MCP, and the login gate
+may only be disabled while listening on loopback.
 
 - Loopback by default; the Hub refuses unsafe configurations if you move it off loopback.
 - REST, WebSocket and MCP all require a token, and browsers are accepted only from a localhost
