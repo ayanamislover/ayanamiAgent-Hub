@@ -241,6 +241,36 @@ for (const file of trackedFiles.filter((name) => name.endsWith(".md"))) {
   }
 }
 
+// The product version is written out by hand in six places -- `crossagent --version`, the health
+// response, the diagnostics bundle, two MCP server identities and the version the Bridge announces
+// to Codex -- and nothing connected them to the version in the root manifest. Reading the manifest
+// at runtime would put `node:fs` into the Dashboard's browser bundle, so the literals stay and the
+// drift is refused instead.
+const productVersion = JSON.parse(
+  readFileSync(resolve(repositoryRoot, "package.json"), "utf8"),
+).version;
+const versionLiteral = /(?<![A-Za-z])version(?:\s*:\s*|\(\s*)"(\d+\.\d+\.\d+[^"]*)"/gu;
+for (const manifestFile of manifestFiles) {
+  const manifest = JSON.parse(readFileSync(resolve(repositoryRoot, manifestFile), "utf8"));
+  if (manifest.version && manifest.version !== productVersion) {
+    problems.push(
+      `${manifestFile} is version ${manifest.version}; the root manifest says ${productVersion}`,
+    );
+  }
+}
+for (const file of trackedFiles.filter(
+  (name) => /^(?:apps|packages)\/[^/]+\/src\//u.test(name) && name.endsWith(".ts"),
+)) {
+  const source = readFileSync(resolve(repositoryRoot, file), "utf8");
+  for (const match of source.matchAll(versionLiteral)) {
+    if (match[1] !== productVersion) {
+      problems.push(
+        `${file} hardcodes version ${match[1]}; the root manifest says ${productVersion}`,
+      );
+    }
+  }
+}
+
 if (problems.length > 0) {
   console.error("Repository hygiene failed:");
   for (const problem of problems) console.error(`- ${problem}`);

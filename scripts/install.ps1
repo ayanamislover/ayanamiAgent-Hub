@@ -55,3 +55,8 @@ if ($LASTEXITCODE -ne 0) {
 } else {
   Write-Host "CrossAgent installed. Run: crossagent --help"
 }
+
+# The link above is explicitly optional, but its exit code is the script's unless something says
+# otherwise, so a complete install read as a failed one to every wrapper -- which is exactly how the
+# clean-install workflow found this. Anything genuinely fatal above has already thrown.
+exit 0

@@ -253,7 +253,7 @@ flowchart LR
 
   subgraph HUB["CrossAgent Hub · 127.0.0.1:4387"]
     direction TB
-    SVC["REST · WebSocket · 16 MCP tools"]
+    SVC["REST · WebSocket · 19 MCP tools"]
     DOM["tasks · messages · write intents<br/>review bundles · presence"]
     DB[("SQLite WAL<br/>append-only events")]
     SVC --- DOM --- DB
@@ -275,7 +275,7 @@ flowchart LR
   class SVC,DOM,DB hub
 ```
 
-- Fastify + SQLite WAL Hub, exposing REST, an authenticated WebSocket, and 16 Streamable HTTP MCP
+- Fastify + SQLite WAL Hub, exposing REST, an authenticated WebSocket, and 19 Streamable HTTP MCP
   tools.
 - Codex app-server Bridge: thread start and resume, turn steer and inject, real adapter activity,
   priority push.
@@ -355,7 +355,8 @@ applies repeatable thresholds to REST, event publish, overview and FTS search.
 - [Changelog](CHANGELOG.md)
 - [Security policy](SECURITY.md)
 - [Architecture](docs/architecture.md)
-- [Protocol](docs/protocol.md)
+- [Protocol](docs/protocol.md) — and the
+  [generated reference](docs/generated/protocol-reference.md) of every route, MCP tool and command
 - [Known limitations](docs/known-limitations.md)
 - [Self-hosting results](docs/evidence/self-hosting-results.md)
 - [Troubleshooting](docs/troubleshooting.md)

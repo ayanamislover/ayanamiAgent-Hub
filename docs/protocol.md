@@ -1,5 +1,10 @@
 # CrossAgent Protocol
 
+This page explains why each part of the protocol is shaped the way it is. What is actually
+registered — every HTTP route, every MCP tool, every command — is read out of the source into
+[the generated reference](generated/protocol-reference.md) by `pnpm docs:generate`, so a count or a
+name here can never quietly stop matching the code.
+
 ## Conventions
 
 - IDs are UUIDv7-like, time-sortable identifiers with readable prefixes (`prj_`, `ses_`, `tsk_`, `msg_`, `rev_`, `evt_`).
@@ -12,6 +17,8 @@
 ## Project join
 
 `POST /api/projects/join`
+
+<!-- schema: JoinProjectInputSchema -->
 
 ```json
 {
@@ -56,6 +63,8 @@ The two client kinds authenticate differently.
 **Dashboard.** The HttpOnly `crossagent_token` cookie carries the `hub:dashboard` credential, so the
 handshake is already authenticated and the first frame is `subscribe`:
 
+<!-- unvalidated: the subscribe frame is typed in apps/hub/src/websocket/project-socket.ts, not by a schema in @crossagent/protocol -->
+
 ```json
 {
   "type": "subscribe",
@@ -68,6 +77,8 @@ handshake is already authenticated and the first frame is `subscribe`:
 
 **Agent.** The socket opens unauthenticated and the first frame must be `authenticate`, carrying the
 raw token of an ACTIVE CONTROL session ticket bound to an open Hub session:
+
+<!-- schema: ProjectSocketAuthenticateFrameSchema -->
 
 ```json
 { "type": "authenticate", "token": "<raw CONTROL session ticket>" }

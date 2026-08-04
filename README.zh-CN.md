@@ -235,7 +235,7 @@ flowchart LR
 
   subgraph HUB["CrossAgent Hub · 127.0.0.1:4387"]
     direction TB
-    SVC["REST · WebSocket · 16 个 MCP 工具"]
+    SVC["REST · WebSocket · 19 个 MCP 工具"]
     DOM["任务 · 消息 · 写入意图<br/>review bundle · 在线状态"]
     DB[("SQLite WAL<br/>只追加事件流")]
     SVC --- DOM --- DB
@@ -257,7 +257,7 @@ flowchart LR
   class SVC,DOM,DB hub
 ```
 
-- Fastify + SQLite WAL Hub，REST、鉴权 WebSocket 与 16 个 Streamable HTTP MCP 工具。
+- Fastify + SQLite WAL Hub，REST、鉴权 WebSocket 与 19 个 Streamable HTTP MCP 工具。
 - Codex app-server Bridge：线程启动/恢复、turn steer/inject、真实 adapter activity 和 priority push。
 - Claude custom Channel：stdio MCP、断线补发、去重、显式 ACK/processed/reply、主动发消息与 inbox。
 - Codex/Claude hooks fallback：普通 CLI 会话也能登记、收取 action-required 消息和回写生命周期。
@@ -325,7 +325,8 @@ overview 与 FTS 搜索做可重复门限检查。
 - [变更日志](CHANGELOG.md)
 - [安全策略](SECURITY.md)
 - [架构](docs/architecture.md)
-- [协议](docs/protocol.md)
+- [协议](docs/protocol.md)——以及由代码生成的
+  [接口清单](docs/generated/protocol-reference.md)：全部路由、MCP 工具与命令
 - [已知限制](docs/known-limitations.md)
 - [自举结果](docs/evidence/self-hosting-results.md)
 - [故障排查](docs/troubleshooting.md)

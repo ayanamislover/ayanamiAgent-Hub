@@ -84,7 +84,11 @@ PR 只跑到上面这一步。合入 main 会额外跑 `pnpm smoke:cli`、`pnpm 
 - documents a credential inside a URL in any tracked Markdown file;
 - carries your own checkout directory or home directory into a tracked text file. Test fixtures do
   need Windows absolute paths — use a neutral one, not the machine you are sitting at;
-- leaves a relative Markdown link pointing at a path that does not exist.
+- leaves a relative Markdown link pointing at a path that does not exist;
+- writes a product version literal that disagrees with the root `package.json`;
+- leaves `docs/generated/protocol-reference.md` out of date, or a JSON example in
+  `docs/protocol.md` without a `<!-- schema: Name -->` annotation. Run `pnpm docs:generate` and
+  commit the result whenever you add a route, an MCP tool or a command.
 
 `pnpm lint` 会先运行 `scripts/repository-hygiene.mjs`，再运行 ESLint。以下情况会直接失败：跟踪了生成
 物或运行时产物；声明了没人 import 的直接依赖，或没人使用的 workspace 库；写了空转的 package script；
