@@ -1,0 +1,35 @@
+version: 2
+
+# Security updates are enabled separately in the repository settings and are not scheduled here;
+# this file is for ordinary version updates. They are grouped so a quiet week produces one pull
+# request against a Windows-only CI run rather than a dozen.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    groups:
+      production:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+      development:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+    ignore:
+      # Both compile a native addon, and the portable win-x64 package is pinned to the Node ABI they
+      # were built against. A major of either needs a rebuilt package and a re-run of the launcher's
+      # ABI check, so it is taken deliberately rather than by an automated pull request.
+      - dependency-name: better-sqlite3
+        update-types: ["version-update:semver-major"]
+      - dependency-name: node-pty
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3

@@ -321,6 +321,9 @@ overview 与 FTS 搜索做可重复门限检查。
 
 ## 文档
 
+- [参与贡献](CONTRIBUTING.md)——推送前那道验证门会检查什么
+- [变更日志](CHANGELOG.md)
+- [安全策略](SECURITY.md)
 - [架构](docs/architecture.md)
 - [协议](docs/protocol.md)
 - [已知限制](docs/known-limitations.md)

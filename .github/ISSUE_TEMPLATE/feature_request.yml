@@ -1,0 +1,41 @@
+name: Feature request
+description: Something the project should be able to do and cannot
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [known limitations](https://github.com/ayanamislover/ayanamiAgent-Hub/blob/main/docs/known-limitations.md)
+        first — several gaps are already recorded there with the reason they are still open.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you were trying to do, and where the current design stopped you.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like instead
+      description: >-
+        A concrete shape helps: a command, an API response, a Dashboard state. If it touches the
+        wire protocol, say which side changes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried or considered
+      description: Workarounds you already have, and why they are not enough.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Does this hold?
+      options:
+        - label: It keeps working with no network access and no model call from the Hub itself.
+        - label: It does not require a static bootstrap credential on a data-plane path.

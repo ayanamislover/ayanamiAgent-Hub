@@ -351,6 +351,9 @@ applies repeatable thresholds to REST, event publish, overview and FTS search.
 
 ## Documentation
 
+- [Contributing](CONTRIBUTING.md) — what the verification gate checks before you push
+- [Changelog](CHANGELOG.md)
+- [Security policy](SECURITY.md)
 - [Architecture](docs/architecture.md)
 - [Protocol](docs/protocol.md)
 - [Known limitations](docs/known-limitations.md)

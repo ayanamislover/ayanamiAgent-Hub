@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/ayanamislover/ayanamiAgent-Hub/security/advisories/new
+    about: Private disclosure. Never open a public issue for a security problem.
+  - name: Installation and startup problems
+    url: https://github.com/ayanamislover/ayanamiAgent-Hub/blob/main/docs/troubleshooting.md
+    about: Read this first — the common Windows failures are already written up here.
+  - name: Known limitations
+    url: https://github.com/ayanamislover/ayanamiAgent-Hub/blob/main/docs/known-limitations.md
+    about: Gaps that are already recorded, with the reason each is still open.
