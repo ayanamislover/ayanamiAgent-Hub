@@ -1,0 +1,16 @@
+# Git converts LF to CRLF on checkout for Windows users (core.autocrlf), so a fresh clone does not
+# contain the bytes the index does. Tests that read tracked files back and match multi-line text
+# therefore passed in the worktree they were written in and failed on every clean clone -- three
+# migration tests in apps/hub/test/session-eviction.test.ts did exactly that. Pinning the checkout
+# to LF makes a clone byte-identical to the index on every platform.
+* text=auto eol=lf
+
+# cmd.exe is the one consumer that genuinely wants CRLF, and these launchers are its entry points.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binaries must never be line-ending converted or diffed as text.
+*.png binary
+*.ico binary
+*.woff binary
+*.woff2 binary

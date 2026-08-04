@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@crossagent/protocol/terminal": ["packages/protocol/src/terminal.ts"],
+      "@crossagent/protocol": ["packages/protocol/src/index.ts"],
+      "@crossagent/client": ["packages/client/src/index.ts"],
+      "@crossagent/hub": ["apps/hub/src/index.ts"],
+      "@crossagent/codex-bridge": ["packages/codex-bridge/src/index.ts"],
+      "@crossagent/claude-channel": ["packages/claude-channel/src/index.ts"],
+      "@crossagent/hooks": ["packages/hooks/src/index.ts"]
+    },
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "skipLibCheck": true,
+    "types": ["node"]
+  }
+}

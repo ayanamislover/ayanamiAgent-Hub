@@ -1,0 +1,2316 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  /* Neutral near-black rather than blue-black: at this luminance a colour cast reads as haze,
+     and it desaturates the semantic green/red/amber that has to carry all the meaning. */
+  --bg: #0b0b0c;
+  --bg-raised: #101012;
+  --panel: #141416;
+  --panel-2: #19191c;
+  --panel-3: #202024;
+  --line: #242427;
+  --line-strong: #3a3a40;
+  --text: #e5e5e5;
+  /* Secondary/tertiary text must clear WCAG AA (4.5:1) on every surface from --bg to --panel-3,
+     not just on the darkest background. */
+  --muted: #adadad;
+  --muted-2: #909090;
+  --accent: #e0a34a;
+  --accent-dim: #3d2b12;
+  --green: #61d39a;
+  --green-dim: #16392a;
+  --amber: #eabf69;
+  --amber-dim: #45351b;
+  --red: #ef776f;
+  --red-dim: #472321;
+  --type-micro: 12px;
+  --type-meta: 13px;
+  --type-label: 14px;
+  --type-body-sm: 15px;
+  --type-body: 16px;
+  --type-body-strong: 17px;
+  --type-title-sm: 18px;
+  --type-title: 22px;
+  --type-metric: 20px;
+  --type-section: 22px;
+  --type-heading: 28px;
+  --type-display-sm: 32px;
+  --type-display: 34px;
+  --type-display-lg: 39px;
+  --sidebar: 286px;
+  /* One radius scale instead of nine ad-hoc values. 3px corners read as brittle at this
+     surface density; every step here is large enough to be seen as a deliberate curve. */
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --radius: var(--r-lg);
+  /* Depth in a dark control room comes from light, not from drop shadows. Every raised
+     surface catches a warm highlight along its top edge and sits on a wide, very soft
+     ambient shadow — that is what separates surfaces without drawing 48 identical boxes. */
+  --edge-top: inset 0 1px 0 rgba(255, 246, 232, 0.055);
+  --elevation-1: 0 1px 1px rgba(0, 0, 0, 0.34), 0 10px 30px -18px rgba(0, 0, 0, 0.8);
+  --elevation-2: 0 2px 4px rgba(0, 0, 0, 0.4), 0 26px 64px -30px rgba(0, 0, 0, 0.92);
+  /* The accent behaves like an emitter, not a fill: what is live glows. */
+  --accent-glow: 0 0 0 1px rgba(224, 163, 74, 0.22), 0 0 22px -6px rgba(224, 163, 74, 0.34);
+  background: var(--bg);
+  color: var(--text);
+  font-synthesis: none;
+  /* Every number on this dashboard updates in place. Proportional digits make the whole grid
+     twitch on each poll; tabular digits keep columns and metrics locked. */
+  font-variant-numeric: tabular-nums;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  min-width: 1180px;
+  min-height: 100%;
+  margin: 0;
+}
+body {
+  min-height: 100vh;
+  font-size: var(--type-body);
+  background:
+    linear-gradient(rgba(122, 122, 130, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122, 122, 130, 0.03) 1px, transparent 1px), var(--bg);
+  background-size: 32px 32px;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button {
+  color: inherit;
+}
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline-offset: 2px;
+}
+code,
+kbd {
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+.muted {
+  color: var(--muted);
+}
+.spin {
+  animation: spin 1.2s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 10;
+  width: var(--sidebar);
+  padding: 24px 17px 18px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(13, 13, 14, 0.97);
+  border-right: 1px solid var(--line);
+  box-shadow: 26px 0 70px -30px rgba(0, 0, 0, 0.9);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 7px 24px;
+}
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  border: 1px solid #5a4828;
+  border-radius: var(--r-md);
+  background: linear-gradient(145deg, #2e2413, #141414);
+  box-shadow: inset 0 0 0 1px rgba(224, 163, 74, 0.05);
+}
+/* Same optical correction as .activity-icon: this mark's artwork sits 12 of 256 units high. */
+.brand-mark > svg {
+  transform: translateY(4.6875%);
+}
+.brand-mark.large {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 18px;
+}
+.brand strong {
+  display: block;
+  letter-spacing: 0.12em;
+  font-size: var(--type-body);
+}
+.brand span {
+  color: var(--muted-2);
+  font:
+    var(--type-meta)/1.5 "Cascadia Code",
+    monospace;
+  letter-spacing: 0.12em;
+}
+.project-switcher {
+  padding: 15px;
+  border: 1px solid var(--line);
+  background: #131313;
+  border-radius: var(--r-md);
+  box-shadow: var(--edge-top), var(--elevation-1);
+  margin-bottom: 24px;
+}
+.project-switcher-head > span,
+.nav-group {
+  color: var(--muted-2);
+  font:
+    var(--type-meta)/1.2 "Cascadia Code",
+    monospace;
+  /* 0.15em was set for Latin small caps; CJK glyphs are already full-width, so the same
+     tracking reads as gapped rather than deliberate. */
+  letter-spacing: 0.08em;
+}
+/* The manage-projects control used to sit beside the name and stole 42px from it, so a normal
+   project name was already ellipsed on arrival. Moving it up to the section header gives the
+   name the full column and puts the action where section actions belong. */
+.project-switcher-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.project-picker {
+  position: relative;
+  margin: 9px 0 7px;
+}
+.project-switcher code {
+  display: block;
+  overflow: hidden;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+  text-overflow: ellipsis;
+}
+.project-switcher > small {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-manager-trigger {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  /* It previously sat at #181818 inside a #131313 panel behind a softened hairline, which left
+     it effectively invisible. A raised fill plus the accent border makes it read as a control. */
+  border: 1px solid rgba(224, 163, 74, 0.34);
+  border-radius: var(--r-xs);
+  background: #262626;
+  color: var(--accent);
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 120ms ease-out;
+}
+.project-manager-trigger:hover {
+  border-color: var(--accent);
+  background: #332a1a;
+}
+.project-manager-trigger:active,
+.icon-button:active,
+.primary-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.sidebar nav {
+  flex: 1;
+  overflow: auto;
+}
+.nav-group {
+  display: block;
+  padding: 15px 10px 7px;
+}
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 46px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: #949494;
+  font-size: var(--type-body);
+  text-align: left;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.nav-item:hover {
+  color: var(--text);
+  background: #1a1a1a;
+}
+.nav-item.active {
+  color: var(--accent);
+  background: #292113;
+  /* the live surface emits rather than fills */
+  box-shadow:
+    inset 2px 0 var(--accent),
+    var(--edge-top),
+    0 0 24px -10px rgba(224, 163, 74, 0.55);
+}
+.nav-item span {
+  flex: 1;
+}
+.nav-item b {
+  min-width: 20px;
+  padding: 2px 5px;
+  border-radius: var(--r-lg);
+  background: var(--red-dim);
+  color: var(--red);
+  text-align: center;
+  font-size: var(--type-label);
+}
+.sidebar-foot {
+  padding: 14px 8px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted-2);
+  font-size: var(--type-label);
+}
+.sidebar-foot div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  border-radius: 50%;
+  background: var(--muted-2);
+  box-shadow: 0 0 0 3px rgba(145, 145, 150, 0.08);
+}
+.status-dot.ok {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(97, 211, 154, 0.1);
+}
+.status-dot.warn {
+  background: var(--amber);
+}
+.status-dot.danger {
+  background: var(--red);
+}
+
+.main-shell {
+  min-height: 100vh;
+  margin-left: var(--sidebar);
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  height: 76px;
+  padding: 0 30px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 560px) minmax(300px, 1fr);
+  align-items: center;
+  gap: 22px;
+  background: rgba(11, 11, 12, 0.9);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-size: var(--type-body);
+}
+.crumb span {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crumb strong {
+  color: var(--muted-2);
+}
+.search-trigger {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #121212;
+  font-size: var(--type-body-sm);
+  text-align: left;
+}
+.search-trigger span {
+  flex: 1;
+}
+kbd {
+  padding: 2px 6px;
+  color: var(--muted-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: #181818;
+  font-size: var(--type-meta);
+}
+.top-metrics {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.top-metrics > div {
+  min-width: 92px;
+  padding: 0 18px;
+  border-left: 1px solid var(--line);
+}
+.top-metrics span {
+  display: block;
+  color: var(--muted-2);
+  font:
+    var(--type-micro)/1.4 "Cascadia Code",
+    monospace;
+  letter-spacing: 0.14em;
+}
+.top-metrics strong {
+  font-size: var(--type-metric);
+}
+.top-metrics .pill {
+  display: inline-flex;
+  margin-top: 3px;
+}
+.page-shell {
+  padding: 30px 32px 44px;
+}
+
+.panel {
+  background: rgba(20, 20, 22, 0.94);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--edge-top), var(--elevation-1);
+  overflow: hidden;
+}
+.panel-head {
+  min-height: 68px;
+  padding: 16px 19px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+.panel-head h2 {
+  margin: 3px 0 0;
+  font-size: var(--type-title-sm);
+  letter-spacing: -0.01em;
+}
+.eyebrow {
+  display: block;
+  color: var(--muted-2);
+  font:
+    var(--type-meta)/1.25 "Cascadia Code",
+    monospace;
+  letter-spacing: 0.15em;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  color: #adadad;
+  background: #202020;
+  font:
+    var(--type-micro)/1.25 "Cascadia Code",
+    monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pill.cyan {
+  color: var(--accent);
+  border-color: #5a4828;
+  background: var(--accent-dim);
+}
+.pill.green {
+  color: var(--green);
+  border-color: #27513c;
+  background: var(--green-dim);
+}
+.pill.amber {
+  color: var(--amber);
+  border-color: #5b4725;
+  background: var(--amber-dim);
+}
+.pill.red {
+  color: var(--red);
+  border-color: #5c2c29;
+  background: var(--red-dim);
+}
+
+.standard-page,
+.overview-layout {
+  max-width: 2140px;
+  margin: 0 auto;
+}
+.overview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.12fr) minmax(300px, 0.88fr);
+  gap: 18px;
+}
+/* The mascot backdrop is owned by pages/overview-mascots.css. It is deliberately not styled
+   here: Codex asked for it in this file, then implemented it in its own page stylesheet, and
+   two competing definitions of one component is worse than either of them. */
+.overview-primary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.overview-rail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.objective-panel {
+  padding: 24px 24px 0;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(224, 163, 74, 0.09), transparent 28%),
+    linear-gradient(120deg, #1a1a1a, #151515);
+}
+.objective-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.objective-top h1,
+.page-heading h1 {
+  margin: 8px 0 8px;
+  font-size: clamp(22px, 1.7vw, 31px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+.objective-top p,
+.page-heading p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--type-body);
+  line-height: 1.65;
+}
+.objective-score {
+  min-width: 120px;
+  text-align: right;
+}
+.objective-score strong {
+  display: block;
+  color: var(--accent);
+  font:
+    50px/0.95 "Cascadia Code",
+    monospace;
+  letter-spacing: -0.08em;
+}
+.objective-score span {
+  color: var(--muted-2);
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+  letter-spacing: 0.16em;
+}
+.progress-wrap {
+  margin-top: 18px;
+}
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.progress-meta strong {
+  color: var(--text);
+  font-family: "Cascadia Code", monospace;
+}
+.progress-track {
+  height: 4px;
+  overflow: hidden;
+  background: var(--line-strong);
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a8742a, var(--accent));
+  box-shadow: 0 0 14px rgba(224, 163, 74, 0.28);
+  transition: width 0.35s ease;
+}
+.milestone-strip {
+  margin: 22px -24px 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--line);
+}
+.milestone {
+  min-width: 0;
+  padding: 15px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-right: 1px solid var(--line);
+}
+.milestone:last-child {
+  border-right: 0;
+}
+.milestone > span {
+  color: var(--accent);
+  font:
+    var(--type-meta) "Cascadia Code",
+    monospace;
+}
+.milestone div {
+  min-width: 0;
+  flex: 1;
+}
+.milestone strong,
+.milestone small {
+  overflow: hidden;
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.milestone strong {
+  font-size: var(--type-label);
+}
+.milestone small {
+  margin-top: 3px;
+  color: var(--muted-2);
+  font-size: var(--type-meta);
+}
+.milestone b {
+  font:
+    var(--type-label) "Cascadia Code",
+    monospace;
+}
+.section-title,
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.section-title h2 {
+  margin: 4px 0 0;
+  font-size: var(--type-section);
+}
+.text-button {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--type-label);
+}
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.span-all {
+  grid-column: 1 / -1;
+}
+.agent-card {
+  padding: 15px;
+}
+.agent-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.agent-avatar {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #464646;
+  border-radius: var(--r-sm);
+  color: var(--accent);
+  background: #2c2416;
+  font:
+    var(--type-title-sm) "Cascadia Code",
+    monospace;
+  /* The font shorthand resets line-height to normal, and this face's normal leading is not
+     symmetric, so a single capital sits visibly off-centre inside the badge even though the
+     grid centres its box perfectly. Collapsing the line box to the glyph fixes the optics. */
+  line-height: 1;
+}
+.agent-avatar.claude {
+  color: #efad78;
+  border-color: #694632;
+  background: #202020;
+}
+.agent-avatar.small {
+  width: 27px;
+  height: 27px;
+  font-size: var(--type-label);
+}
+.agent-avatar.mini {
+  width: 25px;
+  height: 25px;
+  font-size: var(--type-meta);
+}
+.agent-head > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.agent-head h3 {
+  margin: 0;
+  font-size: var(--type-body-strong);
+  text-transform: capitalize;
+}
+.agent-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font:
+    var(--type-meta) "Cascadia Code",
+    monospace;
+}
+.agent-state {
+  margin: 16px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-state > span {
+  color: var(--muted-2);
+  font-size: var(--type-meta);
+  text-transform: capitalize;
+}
+.agent-card dl,
+.review-meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+}
+.agent-card dl div {
+  padding-top: 11px;
+  min-width: 0;
+}
+dt {
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+dd {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: #c4c4c4;
+  font:
+    var(--type-meta) "Cascadia Code",
+    monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proof-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.proof-list > button {
+  min-width: 0;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 16px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.proof-list > button:hover {
+  background: #1c1c1c;
+}
+.proof-list > button div {
+  flex: 1;
+  min-width: 0;
+}
+.proof-list strong,
+.proof-list small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.proof-list strong {
+  font-size: var(--type-label);
+}
+.proof-list small {
+  margin-top: 4px;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+.proof-list > button > span:last-child {
+  font:
+    var(--type-label) "Cascadia Code",
+    monospace;
+}
+.task-status-mark {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.task-status-mark.done {
+  background: var(--green);
+}
+.task-status-mark.blocked {
+  background: var(--red);
+}
+.task-status-mark.in_progress {
+  background: var(--accent);
+}
+.blocker-list {
+  padding: 7px;
+}
+.blocker-list button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--red);
+  text-align: left;
+}
+.blocker-list button div {
+  min-width: 0;
+}
+.blocker-list strong,
+.blocker-list span {
+  display: block;
+}
+.blocker-list strong {
+  color: var(--text);
+  font-size: var(--type-label);
+}
+.blocker-list span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.quiet-state {
+  padding: 18px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
+  font-size: var(--type-label);
+}
+.activity-list {
+  max-height: 465px;
+  overflow: auto;
+}
+.activity-row {
+  min-height: 50px;
+  padding: 9px 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.activity-icon {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #202020;
+  color: var(--accent);
+}
+.activity-icon.system {
+  color: var(--amber);
+}
+/* Optical centring. This glyph's artwork occupies x 48–232 of a 0–256 viewBox, so its drawn
+   centre sits 12 units right of the box centre and the icon reads as shoved right even though
+   the grid centres its box exactly. Percentage translate is relative to the icon's own size,
+   so the correction holds at every rendered dimension. */
+.activity-icon > svg {
+  transform: translateX(-4.6875%);
+}
+.activity-row div {
+  min-width: 0;
+  flex: 1;
+}
+/* Scoped to the text column on purpose. `.activity-row span` also matched the icon badge,
+   which is a span, and at 0,1,1 it beat `.activity-icon` at 0,1,0 — that silently replaced the
+   badge's `display: grid` with `block`, so `place-items: center` stopped applying and the glyph
+   sat 5.7px left and 3px above the centre of its own circle. */
+.activity-row > div > strong,
+.activity-row > div > span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.activity-row strong {
+  font-size: var(--type-meta);
+}
+.activity-row div span {
+  margin-top: 3px;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+.activity-row time {
+  color: var(--muted-2);
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+}
+.rail-health {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.rail-health div {
+  padding: 5px 9px;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  color: var(--muted);
+}
+.rail-health svg {
+  grid-row: span 2;
+  color: var(--accent);
+}
+.rail-health span {
+  font-size: var(--type-micro);
+}
+.rail-health strong {
+  font:
+    var(--type-label) "Cascadia Code",
+    monospace;
+  color: var(--text);
+}
+
+.page-heading {
+  min-height: 74px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+.page-heading h1 {
+  margin: 6px 0 4px;
+  font-size: var(--type-display);
+}
+.heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #131313;
+}
+.segmented button {
+  min-height: 27px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: none;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.segmented button.active {
+  background: #252525;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px #383838;
+}
+.primary-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid #8a6a34;
+  border-radius: var(--r-xs);
+  background: #493717;
+  color: #fcf1df;
+  font-size: var(--type-label);
+  font-weight: 650;
+}
+.primary-button:hover:not(:disabled) {
+  background: #5c451d;
+}
+.primary-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.primary-button.full {
+  width: 100%;
+}
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(230px, 1fr));
+  gap: 11px;
+  /* stretch, not start: with align-items:start a busy column grew to 1328px next to 485px
+     neighbours, leaving the board ragged and the short columns hanging in empty space. */
+  align-items: stretch;
+  /* A grid row sizes to its content and overflows a capped container, so the row has to be
+     told it may shrink before max-height means anything. */
+  grid-template-rows: minmax(0, 1fr);
+  max-height: calc(100vh - 210px);
+  overflow: hidden;
+}
+.kanban-column {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: rgba(15, 15, 16, 0.75);
+  box-shadow: var(--edge-top), var(--elevation-1);
+}
+.kanban-column > header {
+  height: 43px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  color: #c2c2c2;
+  font-size: var(--type-label);
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.kanban-column > header b {
+  min-width: 21px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  background: #252525;
+  color: var(--muted);
+  text-align: center;
+  font:
+    var(--type-meta) "Cascadia Code",
+    monospace;
+}
+.kanban-column > header {
+  flex: none;
+}
+.kanban-column > div {
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+  /* The card list scrolls inside its column so one crowded lane cannot set the board height. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.task-card {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 13px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #191919;
+  box-shadow: var(--edge-top), var(--elevation-1);
+  color: inherit;
+  text-align: left;
+  transition:
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.task-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--edge-top), var(--elevation-2);
+  transform: translateY(-2px);
+}
+.task-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.task-card h3 {
+  margin: 12px 0 7px;
+  font-size: var(--type-body-sm);
+  line-height: 1.35;
+}
+.task-card p {
+  /* 31px against a 1.65 line-height cut the second line through the middle of the glyphs.
+     Clamp to whole lines so overflow ends in an ellipsis instead of a sliced row. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-height: calc(2 * 1.65em);
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--type-meta);
+  line-height: 1.65;
+}
+.task-tags {
+  min-height: 20px;
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.task-tags span,
+.capability-list span {
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  color: var(--muted);
+  background: #171717;
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+}
+.task-card .progress-wrap {
+  margin-top: 10px;
+}
+.task-card footer {
+  margin-top: 11px;
+  padding-top: 9px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.task-card footer code {
+  color: var(--muted-2);
+}
+.kanban-empty {
+  padding: 30px 10px;
+  color: var(--muted-2);
+  font-size: var(--type-meta);
+  text-align: center;
+}
+.dependency-panel {
+  height: calc(100vh - 183px);
+  min-height: 560px;
+}
+.flow-node {
+  width: 210px !important;
+  padding: 9px !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 4px !important;
+  background: #1e1e1e !important;
+  color: var(--text) !important;
+  font-size: var(--type-meta) !important;
+}
+.flow-node.done {
+  border-color: #2c664a !important;
+}
+.flow-node.blocked {
+  border-color: #793b36 !important;
+}
+.react-flow__controls button {
+  background: #1e1e1e;
+  border-color: var(--line);
+  fill: var(--text);
+}
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+.drawer {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: min(480px, 44vw);
+  padding: 28px;
+  overflow: auto;
+  border-left: 1px solid var(--line-strong);
+  background: #131313;
+  box-shadow: -30px 0 80px rgba(0, 0, 0, 0.35);
+}
+.drawer-close {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: #1c1c1c;
+  color: var(--muted);
+}
+.drawer h2 {
+  margin: 8px 38px 8px 0;
+  font-size: var(--type-heading);
+}
+.drawer > p {
+  color: var(--muted);
+  font-size: var(--type-body-sm);
+  line-height: 1.7;
+}
+.drawer-meta {
+  margin: 22px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+}
+.drawer-meta div {
+  padding: 11px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.drawer-meta span,
+.drawer-meta strong {
+  display: block;
+}
+.drawer-meta span {
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+  text-transform: uppercase;
+}
+.drawer-meta strong {
+  margin-top: 4px;
+  font:
+    var(--type-meta) "Cascadia Code",
+    monospace;
+}
+.drawer-section-title {
+  margin: 26px 0 10px;
+  color: var(--muted);
+  font-size: var(--type-label);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.todo-list > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 45px;
+  border-bottom: 1px solid var(--line);
+}
+.todo-list > div > span {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+}
+.todo-list > div > span.done {
+  border-color: var(--green);
+  color: var(--green);
+}
+.todo-list strong,
+.todo-list small {
+  display: block;
+}
+.todo-list strong {
+  font-size: var(--type-label);
+}
+.todo-list small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.button-grid button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  background: #1c1c1c;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+
+.communications-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(280px, 0.8fr);
+  gap: 16px;
+}
+.communications-layout > aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.stream-toolbar {
+  height: 42px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.stream-toolbar span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.stream-toolbar small {
+  color: var(--muted-2);
+}
+.message-list {
+  max-height: calc(100vh - 208px);
+  overflow: auto;
+}
+.message {
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  background: #161616;
+}
+.message.important {
+  border-left-color: var(--amber);
+}
+.message.interrupt {
+  border-left-color: var(--red);
+  background: #161616;
+}
+.message-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.message-line > div:nth-child(2) {
+  flex: 1;
+}
+.message-line strong,
+.message-line span {
+  display: block;
+}
+.message-line strong {
+  font-size: var(--type-label);
+}
+.message-line div span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.message-line time {
+  color: var(--muted-2);
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+}
+.message h3 {
+  margin: 12px 36px;
+  font-size: var(--type-body-sm);
+  line-height: 1.55;
+  font-weight: 500;
+}
+.message-foot {
+  margin-left: 36px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+.message-foot code {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.delivery-state {
+  margin-left: auto;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+}
+.field {
+  display: block;
+  margin: 14px 15px;
+}
+.field > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.field textarea,
+.field input {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: #121212;
+  color: var(--text);
+  font-size: var(--type-label);
+}
+.field textarea {
+  resize: vertical;
+  line-height: 1.55;
+}
+.communications-layout .primary-button {
+  margin: 0 15px 15px;
+  width: calc(100% - 30px);
+}
+.policy-list,
+.guardrail-list {
+  list-style: none;
+  margin: 0;
+  padding: 10px 15px 15px;
+}
+.policy-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.policy-list i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.policy-list i.important {
+  background: var(--amber);
+}
+.policy-list i.interrupt {
+  background: var(--red);
+}
+.policy-list i.normal {
+  background: var(--accent);
+}
+.policy-list strong,
+.policy-list span {
+  display: block;
+}
+.policy-list strong {
+  font-size: var(--type-meta);
+}
+.policy-list span {
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+
+.review-kpis {
+  display: flex;
+  gap: 8px;
+}
+.review-kpis span {
+  min-width: 80px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.review-kpis strong {
+  color: var(--text);
+  font:
+    var(--type-metric) "Cascadia Code",
+    monospace;
+}
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.review-card {
+  padding: 17px;
+}
+.review-card-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.review-card-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.review-card-head h2 {
+  margin: 4px 0 0;
+  overflow: hidden;
+  font:
+    var(--type-body-sm) "Cascadia Code",
+    monospace;
+  text-overflow: ellipsis;
+}
+.review-icon,
+.conflict-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--amber);
+  border: 1px solid #5c4729;
+  background: #212121;
+}
+.sha-flow {
+  margin: 16px 0;
+  padding: 11px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: #131313;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.sha-flow code {
+  color: var(--accent);
+}
+.review-meta {
+  grid-template-columns: repeat(4, 1fr);
+  border: 0;
+}
+.review-meta div {
+  min-width: 0;
+  padding: 0 9px;
+  border-right: 1px solid var(--line);
+}
+.review-meta div:first-child {
+  padding-left: 0;
+}
+.review-meta div:last-child {
+  border-right: 0;
+}
+.acceptance-list {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.acceptance-list div {
+  padding: 8px 0;
+  display: flex;
+  gap: 7px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.acceptance-list svg {
+  color: var(--green);
+}
+.review-card footer {
+  margin-top: 10px;
+  padding-top: 11px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.review-card footer span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.review-card footer .danger {
+  color: var(--red);
+}
+
+.session-matrix {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(280px, 1fr));
+  gap: 13px;
+}
+.session-card {
+  padding: 16px;
+}
+.session-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.session-identity > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.session-identity h2 {
+  margin: 0;
+  font-size: var(--type-title-sm);
+  text-transform: capitalize;
+}
+.session-identity code {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+  text-overflow: ellipsis;
+}
+.session-status {
+  display: flex;
+  gap: 6px;
+  margin: 15px 0;
+}
+.session-stats {
+  border-top: 1px solid var(--line);
+}
+.session-stats > div {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  min-height: 35px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted-2);
+}
+.session-stats svg {
+  color: var(--muted);
+}
+.session-stats span {
+  font-size: var(--type-micro);
+}
+.session-stats strong {
+  max-width: 140px;
+  overflow: hidden;
+  color: #c3c3c3;
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+  text-overflow: ellipsis;
+}
+.capability-list {
+  min-height: 48px;
+  padding: 11px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.session-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+.session-card footer span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conflict-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.conflict-card {
+  padding: 17px;
+  border-left: 2px solid var(--amber);
+}
+.conflict-card.critical,
+.conflict-card.high {
+  border-left-color: var(--red);
+}
+.conflict-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.conflict-head > div {
+  flex: 1;
+}
+.conflict-head h2 {
+  margin: 4px 0 0;
+  font:
+    var(--type-label) "Cascadia Code",
+    monospace;
+}
+.conflict-sides {
+  margin: 16px 0;
+  display: grid;
+  grid-template-columns: 1fr 30px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.conflict-sides > svg {
+  color: var(--red);
+}
+.conflict-sides div {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--line);
+  background: #131313;
+}
+.conflict-sides strong,
+.conflict-sides span,
+.conflict-sides code {
+  display: block;
+}
+.conflict-sides strong {
+  font-size: var(--type-label);
+}
+.conflict-sides span {
+  margin: 3px 0;
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.conflict-sides code {
+  overflow: hidden;
+  color: var(--accent);
+  font-size: var(--type-micro);
+  text-overflow: ellipsis;
+}
+.overlap-files {
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.overlap-files span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  background: var(--red-dim);
+  color: var(--red);
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+}
+.conflict-card footer {
+  margin-top: 13px;
+  padding-top: 11px;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+.conflict-card footer button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--type-meta);
+}
+
+.inline-search {
+  height: 34px;
+  min-width: 260px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: #131313;
+  color: var(--muted);
+}
+.inline-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--type-label);
+}
+.audit-panel {
+  overflow: auto;
+}
+.audit-header,
+.audit-row {
+  min-width: 900px;
+  display: grid;
+  grid-template-columns:
+    70px 100px minmax(250px, 1.4fr) minmax(120px, 0.7fr) minmax(180px, 1fr)
+    80px;
+  align-items: center;
+}
+.audit-header {
+  height: 36px;
+  padding: 0 13px;
+  color: var(--muted-2);
+  background: #121212;
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+  letter-spacing: 0.1em;
+}
+.audit-row {
+  min-height: 42px;
+  padding: 0 13px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.audit-row:hover {
+  background: #1b1b1b;
+}
+.audit-row code {
+  color: #9e9e9e;
+  font-size: var(--type-micro);
+}
+.audit-row > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.audit-row strong {
+  color: #d1d1d1;
+  font-weight: 550;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
+  gap: 15px;
+}
+.settings-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.code-editor {
+  min-height: 420px;
+  resize: vertical;
+  font:
+    var(--type-label)/1.65 "Cascadia Code",
+    monospace !important;
+  color: #e1d2b9 !important;
+}
+.settings-actions {
+  padding: 0 15px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.settings-actions span {
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.health-checks,
+.adapter-list {
+  padding: 8px 14px 14px;
+}
+.health-checks > div {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 25px 1fr auto;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.health-checks svg {
+  color: var(--green);
+}
+.health-checks span {
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.health-checks strong {
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+}
+.adapter-list > div {
+  min-height: 43px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.adapter-list > div > div {
+  min-width: 0;
+  flex: 1;
+}
+.adapter-list > div > div > strong,
+.adapter-list > div > div > span {
+  display: block;
+}
+.adapter-list > div > div > strong {
+  font-size: var(--type-meta);
+}
+.adapter-list > div > div > span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.guardrail-list li {
+  position: relative;
+  padding: 7px 0 7px 15px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.guardrail-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  background: var(--green);
+}
+
+.empty-state {
+  min-height: 130px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--muted);
+  text-align: center;
+}
+.empty-glyph {
+  color: var(--line-strong);
+  font:
+    var(--type-heading) "Cascadia Code",
+    monospace;
+}
+.empty-state strong {
+  color: #bebebe;
+  font-size: var(--type-body-sm);
+}
+.empty-state span {
+  max-width: 380px;
+  font-size: var(--type-meta);
+  line-height: 1.5;
+}
+.loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: var(--muted);
+  background: var(--bg);
+  font-size: var(--type-body-sm);
+}
+.loading svg {
+  color: var(--accent);
+}
+.error-state {
+  margin: 50px auto;
+  max-width: 600px;
+  padding: 18px;
+  display: flex;
+  gap: 11px;
+  border: 1px solid #63322e;
+  background: var(--red-dim);
+  color: var(--red);
+}
+.error-state strong,
+.error-state span {
+  display: block;
+}
+.error-state span {
+  margin-top: 4px;
+  font-size: var(--type-label);
+}
+.palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding-top: 12vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(2, 5, 7, 0.7);
+  backdrop-filter: blur(4px);
+}
+.palette {
+  width: min(660px, 70vw);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: #171717;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.6);
+}
+.palette-input {
+  height: 55px;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.palette-input input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--type-body-strong);
+}
+.palette-input button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.palette-results {
+  padding: 13px;
+}
+.palette-results > .eyebrow {
+  padding: 0 6px 8px;
+}
+.palette-results button {
+  width: 100%;
+  min-height: 47px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.palette-results button:hover {
+  background: #232323;
+}
+.palette-results strong,
+.palette-results small {
+  display: block;
+}
+.palette-results strong {
+  font-size: var(--type-label);
+}
+.palette-results small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: var(--type-micro);
+}
+.access-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 35%, rgba(224, 163, 74, 0.07), transparent 28%);
+}
+.gate-card {
+  width: 420px;
+  padding: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: #151515;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.4);
+}
+.gate-card h1 {
+  margin: 8px 0;
+  font-size: var(--type-display-sm);
+}
+.gate-card p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: var(--type-label);
+  line-height: 1.6;
+}
+.gate-card label {
+  height: 42px;
+  margin-bottom: 10px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: #0f0f0f;
+  color: var(--muted);
+}
+.gate-card input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+}
+.gate-error {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--red);
+  font-size: var(--type-meta);
+}
+
+.project-onboarding {
+  min-height: 100vh;
+  padding: 48px;
+  display: grid;
+  place-items: center;
+}
+.project-onboarding-card {
+  width: min(880px, calc(100vw - 96px));
+  padding: 42px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(224, 163, 74, 0.11), transparent 31%), #161616;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.34);
+}
+.project-onboarding-card h1 {
+  margin: 12px 0 10px;
+  font-size: 34px;
+  letter-spacing: -0.035em;
+}
+.project-onboarding-card > p {
+  max-width: 700px;
+  margin: 0 0 30px;
+  color: var(--muted);
+  font-size: var(--type-body);
+  line-height: 1.65;
+}
+.project-register-form {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: #121212;
+}
+.project-register-form > label {
+  display: block;
+  color: var(--text);
+  font-size: var(--type-body-strong);
+  font-weight: 700;
+}
+.project-register-form > p {
+  margin: 6px 0 16px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+  line-height: 1.55;
+}
+.project-path-entry {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: auto minmax(240px, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding-left: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: #181818;
+}
+.project-path-entry > svg {
+  color: var(--accent);
+}
+.project-path-entry input {
+  min-width: 0;
+  align-self: stretch;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  font-size: var(--type-label);
+}
+.project-path-entry .primary-button {
+  align-self: stretch;
+  min-height: 46px;
+  margin: -1px;
+  padding-inline: 18px;
+  border-radius: 0 7px 7px 0;
+  font-size: var(--type-label);
+}
+.project-register-error {
+  display: block;
+  margin-top: 12px;
+  color: var(--red);
+  font-size: var(--type-meta);
+}
+.project-manager-dialog {
+  width: min(920px, calc(100vw - 64px));
+  max-height: min(820px, calc(100vh - 64px));
+  padding: 0;
+  overflow: hidden;
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: #161616;
+  box-shadow: 0 28px 110px rgba(0, 0, 0, 0.58);
+}
+.project-manager-dialog::backdrop {
+  background: rgba(3, 6, 8, 0.72);
+  backdrop-filter: blur(5px);
+}
+.project-manager-dialog > header {
+  min-height: 78px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: #181818;
+}
+.project-manager-dialog h2 {
+  margin: 5px 0 0;
+  font-size: var(--type-title);
+}
+.icon-button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #1c1c1c;
+  color: var(--muted);
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    transform 120ms ease-out;
+}
+.icon-button:hover {
+  color: var(--text);
+  background: #252525;
+}
+.icon-button.compact {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+.project-manager-body {
+  max-height: calc(min(820px, 100vh - 64px) - 78px);
+  padding: 22px;
+  overflow: auto;
+}
+.registered-projects {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.registered-project {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #121212;
+}
+.registered-project.active {
+  border-color: #68522d;
+  box-shadow: inset 3px 0 var(--accent);
+}
+.registered-project-select {
+  min-width: 0;
+  padding: 15px 16px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.registered-project-select:hover {
+  background: #1a1a1a;
+}
+.registered-project-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #58482c;
+  border-radius: var(--r-md);
+  color: var(--accent);
+  background: #2b2314;
+}
+.registered-project-select strong,
+.registered-project-select small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.registered-project-select strong {
+  font-size: var(--type-body-strong);
+}
+.registered-project-select small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+.current-project-label {
+  padding: 4px 7px;
+  border: 1px solid #27513c;
+  border-radius: var(--r-xs);
+  background: var(--green-dim);
+  color: var(--green);
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+  letter-spacing: 0.08em;
+}
+.registered-project-id {
+  min-width: 290px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  border-left: 1px solid var(--line);
+}
+.registered-project-id code {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--type-micro);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1500px) {
+  :root {
+    --sidebar: 260px;
+  }
+  .topbar {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(300px, 1fr) auto;
+  }
+  .top-metrics > div {
+    min-width: 66px;
+    padding: 0 10px;
+  }
+  .overview-layout {
+    grid-template-columns: minmax(0, 1.7fr) minmax(290px, 0.8fr);
+  }
+  .session-matrix {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

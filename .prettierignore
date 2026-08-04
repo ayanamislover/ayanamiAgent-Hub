@@ -1,0 +1,8 @@
+node_modules/
+dist/
+output/
+.playwright-cli/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml

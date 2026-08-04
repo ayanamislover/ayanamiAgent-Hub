@@ -1,0 +1,303 @@
+.settings-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.authorization-panel {
+  padding: 15px 16px 17px;
+}
+
+.authorization-boundary {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid #5b4725;
+  border-radius: var(--r-sm);
+  color: var(--amber);
+  background: var(--amber-dim);
+}
+
+.authorization-boundary svg {
+  margin-top: 1px;
+}
+
+.authorization-boundary strong,
+.authorization-boundary span {
+  display: block;
+}
+
+.authorization-boundary strong {
+  color: #f1d8aa;
+  font-size: var(--type-label);
+}
+
+.authorization-boundary span {
+  margin-top: 4px;
+  color: #c8b998;
+  font-size: var(--type-meta);
+  line-height: 1.55;
+}
+
+.authorization-section {
+  margin-top: 16px;
+}
+
+.authorization-section > header {
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.authorization-section h3 {
+  margin: 0;
+  font-size: var(--type-body-strong);
+}
+
+.authorization-section header span:not(.pill) {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+
+.authorization-list {
+  display: grid;
+  gap: 9px;
+}
+
+.authorization-request {
+  padding: 13px 14px;
+  border: 1px solid #4f422c;
+  border-radius: var(--r-sm);
+  background: #171510;
+}
+
+.authorization-request.active {
+  border-color: #27513c;
+  background: #111813;
+}
+
+.authorization-request-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.authorization-request-heading strong,
+.authorization-request-heading code {
+  display: block;
+}
+
+.authorization-request-heading strong {
+  font-size: var(--type-body-sm);
+}
+
+.authorization-request-heading code {
+  margin-top: 4px;
+  color: var(--muted-2);
+  font:
+    var(--type-micro) "Cascadia Code",
+    monospace;
+}
+
+.authorization-request p {
+  max-width: 76ch;
+  margin: 11px 0;
+  color: var(--muted);
+  font-size: var(--type-meta);
+  line-height: 1.55;
+}
+
+.authorization-request dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin: 12px 0 0;
+}
+
+.authorization-request dl > div {
+  min-width: 0;
+}
+
+.authorization-request dt {
+  color: var(--muted-2);
+  font-size: var(--type-micro);
+}
+
+.authorization-request dd {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: #cfcfcf;
+  font:
+    var(--type-meta) "Cascadia Code",
+    monospace;
+  text-overflow: ellipsis;
+}
+
+.authorization-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.authorization-actions button,
+.authorization-error button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border-radius: var(--r-xs);
+  font-size: var(--type-label);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.authorization-actions button:active:not(:disabled),
+.authorization-error button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.authorization-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.authorization-approve {
+  border: 1px solid #2f6248;
+  color: #d8f5e4;
+  background: #193c29;
+}
+
+.authorization-approve:hover:not(:disabled) {
+  background: #205036;
+}
+
+.authorization-deny,
+.authorization-revoke {
+  border: 1px solid #653431;
+  color: #f5d4d1;
+  background: #3e211f;
+}
+
+.authorization-deny:hover:not(:disabled),
+.authorization-revoke:hover:not(:disabled) {
+  background: #522a27;
+}
+
+.authorization-empty {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: var(--type-meta);
+  background: #111112;
+}
+
+.authorization-empty svg {
+  flex: 0 0 auto;
+  color: var(--muted-2);
+}
+
+.authorization-loading {
+  min-height: 92px;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 24px 120px minmax(80px, 1fr);
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+
+.authorization-loading span {
+  height: 13px;
+  border-radius: var(--r-xs);
+  background: #252525;
+  animation: authorization-pulse 1.25s ease-in-out infinite alternate;
+}
+
+.authorization-loading span:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.authorization-loading span:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes authorization-pulse {
+  from {
+    opacity: 0.48;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.authorization-error {
+  min-height: 76px;
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #653431;
+  border-radius: var(--r-sm);
+  color: var(--red);
+  background: var(--red-dim);
+}
+
+.authorization-error strong,
+.authorization-error span {
+  display: block;
+}
+
+.authorization-error strong {
+  color: #f1c8c4;
+  font-size: var(--type-label);
+}
+
+.authorization-error span {
+  margin-top: 3px;
+  color: #d3aaa6;
+  font-size: var(--type-meta);
+}
+
+.authorization-error button {
+  border: 1px solid #7a413d;
+  color: #f5d4d1;
+  background: #4b2825;
+}
+
+.authorization-feedback {
+  min-height: 18px;
+  display: block;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: var(--type-meta);
+}
+
+@media (max-width: 1500px) {
+  .authorization-request dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .authorization-loading span {
+    animation: none;
+  }
+}

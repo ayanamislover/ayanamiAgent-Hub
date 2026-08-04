@@ -1,0 +1,65 @@
+name: CI
+
+# Windows is the supported platform (see README "Platform support"), so the gate that decides
+# whether a change is good runs there. The macOS and Linux branches in the code are not covered
+# here, which matches how honestly they are described in the README.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the version straight from the `packageManager` field, so the pin has one home. Not
+      # Corepack: the copy bundled with Node carries npm signing keys that no longer verify
+      # ("Cannot find matching keyid"), and it fails before it ever reads the pin.
+      - uses: pnpm/action-setup@v4
+
+      # The exact floor package.json declares, so that the declared minimum is the version actually
+      # proven to work rather than whatever happens to be current.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: pnpm format:check
+
+      # Runs the repository hygiene script before ESLint.
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # The root release build. Component packages refuse to build unless this holds the BUILD lock.
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+# The Dashboard end-to-end suite is deliberately not a job here. Its fixture cannot seed a clean
+# data directory: it registers sessions claiming to be real Codex and Claude adapters, and the Hub
+# correctly refuses that from the compatibility credential. It only ever appeared to pass because
+# output/playwright/e2e-data survives between runs. Wiring in a job that can only be red would train
+# everyone to ignore CI, so the gap is recorded in docs/known-limitations.md instead, and the job
+# comes back when the fixture drives the real enrollment flow.

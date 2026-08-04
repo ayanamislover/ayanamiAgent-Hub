@@ -1,0 +1,72 @@
+.overview-layout {
+  position: relative;
+  isolation: isolate;
+}
+
+.overview-layout > .overview-primary,
+.overview-layout > .overview-rail {
+  position: relative;
+  z-index: 1;
+}
+
+.agent-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+}
+
+.agent-backdrop img {
+  position: absolute;
+  bottom: 36px;
+  height: auto;
+  opacity: 0.24;
+  filter: saturate(0.82) drop-shadow(0 24px 42px rgb(0 0 0 / 0.24));
+  transform: scaleX(-1);
+}
+
+.agent-backdrop-codex {
+  left: clamp(-360px, -11vw, -220px);
+  width: clamp(230px, 9vw, 340px);
+  animation: codex-backdrop-breathe 5.8s ease-in-out infinite;
+}
+
+.agent-backdrop-claude {
+  right: clamp(-440px, -13vw, -260px);
+  width: clamp(310px, 12vw, 460px);
+  animation: claude-backdrop-breathe 6.4s ease-in-out infinite 0.45s;
+}
+
+@keyframes codex-backdrop-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(2deg) scaleX(-1);
+  }
+  50% {
+    transform: translateY(-7px) rotate(0deg) scaleX(-1);
+  }
+}
+
+@keyframes claude-backdrop-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.5deg) scaleX(-1);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0deg) scaleX(-1);
+  }
+}
+
+@media (max-width: 2499px) {
+  .agent-backdrop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-backdrop img {
+    animation: none;
+  }
+}

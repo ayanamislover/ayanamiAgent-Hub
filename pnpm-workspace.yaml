@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  # Microsoft's PTY bindings, the same ones VS Code uses. A real pseudo-terminal is the point of
+  # the console: piped stdio would give the agent CLIs no TTY, so they would drop their
+  # interactive modes. Its install script compiles the native addon, hence the explicit approval.
+  node-pty: true

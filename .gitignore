@@ -1,0 +1,55 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+.vite/
+.playwright-cli/
+playwright-report/
+test-results/
+output/
+*.log
+*.pid
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+.crossagent/
+.crossagent-build/
+!examples/.crossagent/
+!examples/.crossagent/**
+
+# Local credentials and machine-specific configuration
+.env
+.env.local
+.env.*
+!.env.example
+!.env.*.example
+.mcp.json
+.mcp.json.bak-*
+
+# Local collaboration process, not part of the project. These are working notes for the agents that
+# build this repository -- session ids, PIDs, machine paths -- and mean nothing to anyone else.
+# User-facing limitations live in docs/known-limitations.md instead.
+agents_task.md
+bugreport.md
+future_todo_list.md
+Claude_readme.md
+
+# Two incident reports stay local. They are real forensic records and are kept intact on disk, but
+# they name the private workspace the incidents happened in, along with its absolute paths and
+# thread ids. docs/incidents/2026-07-30-multi-session-surface-race.md carries none of that and is
+# tracked normally, so this ignores the two files rather than the directory.
+docs/incidents/2026-07-30-codex-bridge-false-delivery.md
+docs/incidents/2026-07-30-codex-bridge-hub-outage.md
+
+# Local compiler and editor state
+*.tsbuildinfo
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "protectedGlobs": ["package.json", "pnpm-lock.yaml", "migrations/**", "src/api/**"],
+  "wakePolicy": "urgent_and_action_required"
+}

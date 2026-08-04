@@ -1,0 +1,47 @@
+{
+  "name": "ayanami-agent-hub",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "node scripts/build-release.mjs",
+    "dev": "concurrently -k -n hub,dashboard -c green,cyan \"pnpm --filter @crossagent/hub dev\" \"pnpm --filter @crossagent/dashboard dev\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "hygiene": "node scripts/repository-hygiene.mjs",
+    "clean:artifacts": "node scripts/clean-artifacts.mjs --apply",
+    "clean:artifacts:check": "node scripts/clean-artifacts.mjs",
+    "lint": "pnpm hygiene && eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm -r --workspace-concurrency=1 typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "pnpm --filter @crossagent/dashboard test:e2e",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "collab:stats": "tsx apps/hub/scripts/collab-stats.ts",
+    "demo": "tsx apps/hub/scripts/demo-seed.ts",
+    "smoke:cli": "tsx scripts/cli-smoke.ts",
+    "smoke:review": "tsx scripts/review-smoke.ts",
+    "start": "node packages/cli/dist/bin.js start",
+    "crossagent": "node packages/cli/dist/bin.js",
+    "review:stats": "tsx apps/hub/scripts/review-stats.ts",
+    "prune:history": "tsx apps/hub/scripts/prune-history.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@types/node": "^24.1.0",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.3.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0",
+    "vitest": "^3.2.4"
+  }
+}
