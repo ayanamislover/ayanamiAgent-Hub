@@ -70,6 +70,27 @@ say about scrutiny — are in [self-hosting results](docs/evidence/self-hosting-
 
 ## Install
 
+### Portable package (Windows)
+
+`crossagent-hub-v<version>-win-x64.zip` unpacks and runs with nothing else installed — no pnpm, no
+compiler, no network. Unzip it anywhere and double-click `Start-CrossAgent-Hub.cmd`.
+
+It ships compiled `better-sqlite3` and `node-pty` binaries, and a compiled addon loads into exactly
+one Node.js ABI. So the package pins the Node.js major it was built with: `release.json` records
+that ABI and the launcher refuses a mismatch up front instead of failing inside a `require` several
+screens later. Installing from source, below, carries no such pin.
+
+To produce the package from a checkout, run `pnpm build` and then:
+
+```powershell
+pnpm release:package
+```
+
+That writes the zip, `SHA256SUMS.txt` and an SPDX 2.3 SBOM into `output/release/`, and refuses to
+run unless the build it is packing passes the same release verification the Hub performs at startup.
+
+### From source
+
 Requires Node.js 22.13+, pnpm 11+ and Git. The Codex Bridge additionally needs a working `codex`
 CLI; the Claude native Channel needs a Claude Code build that supports custom Channels.
 

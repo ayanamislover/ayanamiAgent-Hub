@@ -62,6 +62,26 @@ pnpm demo
 
 ## 安装
 
+### 便携包（Windows）
+
+`crossagent-hub-v<版本>-win-x64.zip` 解压即用：不需要 pnpm，不需要编译器，不需要联网。解压到任意
+目录，双击 `Start-CrossAgent-Hub.cmd` 即可。
+
+包内自带编译好的 `better-sqlite3` 与 `node-pty`，而原生扩展只能加载进它编译时所对应的那一个
+Node.js ABI。因此便携包锁定构建时使用的 Node.js 主版本：`release.json` 记录了该 ABI，启动脚本会
+先行拒绝不匹配的 Node，而不是让你在若干屏之后撞上 `require` 里的报错。下面的源码安装没有这个限制。
+
+从仓库生成便携包：先 `pnpm build`，然后
+
+```powershell
+pnpm release:package
+```
+
+它会把 zip、`SHA256SUMS.txt` 和一份 SPDX 2.3 SBOM 写到 `output/release/`；并且只有当被打包的构建
+能通过 Hub 启动时执行的同一套发布校验时，它才会继续。
+
+### 从源码安装
+
 需要 Node.js 22.13+、pnpm 11+ 和 Git。Codex Bridge 还需要可用的 `codex` CLI；Claude native Channel 需要支持 custom Channels 的 Claude Code。
 
 Windows PowerShell：

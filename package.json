@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "node scripts/build-release.mjs",
+    "release:package": "node scripts/package-release.mjs",
     "dev": "concurrently -k -n hub,dashboard -c green,cyan \"pnpm --filter @crossagent/hub dev\" \"pnpm --filter @crossagent/dashboard dev\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
