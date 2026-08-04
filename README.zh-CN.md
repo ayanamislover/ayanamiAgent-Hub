@@ -336,6 +336,7 @@ overview 与 FTS 搜索做可重复门限检查。
 - [架构](docs/architecture.md)
 - [协议](docs/protocol.md)——以及由代码生成的
   [接口清单](docs/generated/protocol-reference.md)：全部路由、MCP 工具与命令
+- [编写 Adapter](docs/adapter-authoring.md)——包括第三方客户端目前做不到什么，以及要放开需要改的五处
 - [已知限制](docs/known-limitations.md)
 - [自举结果](docs/evidence/self-hosting-results.md)
 - [故障排查](docs/troubleshooting.md)

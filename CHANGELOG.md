@@ -34,6 +34,15 @@ snapshot. It becomes the first tagged release.
 - The Bridge watches the Codex rollout behind its thread — read latency, read timeouts and file
   size — and reports it in health. Past the point where `thread/read` stops answering it marks the
   thread for retirement, and the next launch starts a successor thread instead of resuming it.
+- `@crossagent/protocol` and `@crossagent/client` are no longer private: both carry publishing
+  metadata, a README and AGPL-3.0-only, so an Adapter can be written against the same schemas the
+  Hub validates its own requests with.
+- `docs/adapter-authoring.md` and `examples/fake-agent-adapter/`, which state the third-party
+  boundary rather than implying there is none: a non-Codex, non-Claude client can register and close
+  a `fake-client` session and nothing else, because heartbeat, inbox, acknowledgement and posting
+  all require `hub:session`, which only a session ticket carries. The document lists the five places
+  that must change to admit a third client family, and `apps/hub/test/third-party-adapter.test.ts`
+  pins the closed state so it cannot drift.
 - `SECURITY.md` with a private vulnerability reporting route and an explicit in-scope boundary.
 - `docs/evidence/self-hosting-results.md`, holding the collaboration and review statistics with a
   provenance note naming where the numbers come from.

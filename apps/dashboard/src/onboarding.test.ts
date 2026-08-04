@@ -56,7 +56,7 @@ describe("first-run onboarding steps", () => {
         environment: {
           compatibility: {
             codex: null,
-            claude: { available: true, version: "1.2.3", customChannel: "unsupported" },
+            claude: { available: true, customChannel: "unsupported" },
           },
           adapters: { claudeChannel: false, claudeHooks: false, codexHooks: false },
         },
@@ -79,7 +79,7 @@ describe("first-run onboarding steps", () => {
         environment: {
           compatibility: {
             codex: null,
-            claude: { available: true, version: "1.2.3", customChannel: "supported" },
+            claude: { available: true, customChannel: "supported" },
           },
           adapters: { claudeChannel: false, claudeHooks: false, codexHooks: false },
         },
@@ -131,7 +131,7 @@ describe("first-run onboarding steps", () => {
         environment: {
           compatibility: {
             codex: { version: "codex-cli 0.145.0" },
-            claude: { available: true, version: "1.2.3", customChannel: "supported" },
+            claude: { available: true, customChannel: "supported" },
           },
           adapters: { claudeChannel: true, claudeHooks: false, codexHooks: false },
         },

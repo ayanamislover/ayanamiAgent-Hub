@@ -367,6 +367,8 @@ applies repeatable thresholds to REST, event publish, overview and FTS search.
 - [Architecture](docs/architecture.md)
 - [Protocol](docs/protocol.md) — and the
   [generated reference](docs/generated/protocol-reference.md) of every route, MCP tool and command
+- [Writing an Adapter](docs/adapter-authoring.md) — including what a third-party client cannot do
+  yet, and the five places that would have to change
 - [Known limitations](docs/known-limitations.md)
 - [Self-hosting results](docs/evidence/self-hosting-results.md)
 - [Troubleshooting](docs/troubleshooting.md)

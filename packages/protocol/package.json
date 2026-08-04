@@ -1,7 +1,22 @@
 {
   "name": "@crossagent/protocol",
   "version": "0.1.0",
-  "private": true,
+  "description": "The CrossAgent Hub contract: Zod schemas, domain types and constants for writing an Adapter.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayanamislover/ayanamiAgent-Hub.git",
+    "directory": "packages/protocol"
+  },
+  "homepage": "https://github.com/ayanamislover/ayanamiAgent-Hub/blob/main/docs/adapter-authoring.md",
+  "bugs": "https://github.com/ayanamislover/ayanamiAgent-Hub/issues",
+  "keywords": [
+    "crossagent",
+    "agent",
+    "adapter",
+    "protocol",
+    "zod"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,6 +31,16 @@
       "development": "./src/terminal.ts",
       "import": "./dist/terminal.js"
     }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node ../../scripts/build-component.mjs @crossagent/protocol -- tsup src/index.ts src/terminal.ts --format esm --dts --clean",

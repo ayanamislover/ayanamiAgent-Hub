@@ -1,7 +1,21 @@
 {
   "name": "@crossagent/client",
   "version": "0.1.0",
-  "private": true,
+  "description": "Typed HTTP and WebSocket client for a CrossAgent Hub, used by every Adapter.",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayanamislover/ayanamiAgent-Hub.git",
+    "directory": "packages/client"
+  },
+  "homepage": "https://github.com/ayanamislover/ayanamiAgent-Hub/blob/main/docs/adapter-authoring.md",
+  "bugs": "https://github.com/ayanamislover/ayanamiAgent-Hub/issues",
+  "keywords": [
+    "crossagent",
+    "agent",
+    "adapter",
+    "client"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,6 +25,16 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node ../../scripts/build-component.mjs @crossagent/client -- tsup src/index.ts --format esm --dts --clean",
