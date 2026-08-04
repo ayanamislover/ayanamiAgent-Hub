@@ -9,7 +9,12 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   workers: 1,
-  timeout: 30_000,
+  // Playwright's 5s assertion budget and 30s case budget are developer-machine numbers. The first
+  // paint after a launch-code exchange missed 5s once on a GitHub Windows runner -- a cold start at
+  // 3440x1440, not a broken page, which never renders at all however long you wait. Raising the
+  // ceilings costs nothing on a passing run and keeps a failure meaningful.
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
   outputDir: resolve(outputRoot, "test-results"),
   globalSetup: "./e2e/global-setup.ts",
   use: {
