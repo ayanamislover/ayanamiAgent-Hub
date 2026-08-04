@@ -130,7 +130,7 @@ export function AppShell({
               {connected ? t("Live connection") : stale ? t("Resync required") : t("Reconnecting")}
             </span>
           </div>
-          <span>v0.1.0 · {t("Local only")}</span>
+          <span>v0.1.0-alpha.1 · {t("Local only")}</span>
         </div>
       </aside>
       <main className="main-shell">

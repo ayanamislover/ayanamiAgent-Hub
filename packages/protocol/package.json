@@ -1,6 +1,6 @@
 {
   "name": "@crossagent/protocol",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "The CrossAgent Hub contract: Zod schemas, domain types and constants for writing an Adapter.",
   "license": "AGPL-3.0-only",
   "repository": {

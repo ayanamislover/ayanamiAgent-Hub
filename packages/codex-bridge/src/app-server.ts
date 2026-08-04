@@ -74,7 +74,7 @@ export class CodexAppServer extends EventEmitter {
           clientInfo: {
             name: "crossagent_hub",
             title: "CrossAgent Hub",
-            version: "0.1.0",
+            version: "0.1.0-alpha.1",
           },
           capabilities: {
             experimentalApi: this.options.experimentalApi ?? true,

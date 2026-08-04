@@ -353,7 +353,7 @@ export class ClaudeChannel {
       dependencies.createRenewal ??
       ((renewalOptions) => new ClaudeSessionTicketRenewal(renewalOptions));
     this.mcp = new McpServer(
-      { name: "crossagent-claude-channel", version: "0.1.0" },
+      { name: "crossagent-claude-channel", version: "0.1.0-alpha.1" },
       {
         instructions: CHANNEL_INSTRUCTIONS,
         capabilities: {

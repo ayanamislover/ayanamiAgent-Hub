@@ -141,7 +141,7 @@ export async function registerApiRoutes(
     return {
       ok: true,
       service: "crossagent-hub",
-      version: "0.1.0",
+      version: "0.1.0-alpha.1",
       time: new Date().toISOString(),
       instanceId: runtimeIdentity.instanceId,
       startedAt: runtimeIdentity.startedAt,

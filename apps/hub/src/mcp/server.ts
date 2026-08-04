@@ -106,7 +106,7 @@ function assertMcpProject(store: HubStore, principal: RequestPrincipal, projectI
 
 export function createMcpServer(store: HubStore, principal: RequestPrincipal): McpServer {
   const server = new McpServer(
-    { name: "crossagent-hub", version: "0.1.0" },
+    { name: "crossagent-hub", version: "0.1.0-alpha.1" },
     { instructions: INSTRUCTIONS, capabilities: { logging: {} } },
   );
 

@@ -21,7 +21,7 @@ function version(command: string, args = ["--version"]): string | null {
 export async function collectDiagnostics(): Promise<Record<string, unknown>> {
   return {
     generatedAt: new Date().toISOString(),
-    productVersion: "0.1.0",
+    productVersion: "0.1.0-alpha.1",
     os: { platform: platform(), release: release() },
     runtime: {
       node: process.version,

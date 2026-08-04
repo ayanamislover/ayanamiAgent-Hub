@@ -1,6 +1,6 @@
 {
   "name": "@crossagent/client",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "Typed HTTP and WebSocket client for a CrossAgent Hub, used by every Adapter.",
   "license": "AGPL-3.0-only",
   "repository": {

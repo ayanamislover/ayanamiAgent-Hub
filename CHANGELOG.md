@@ -11,8 +11,16 @@ documentation is bilingual: [README](./README.md) · [简体中文](./README.zh-
 
 ## [Unreleased]
 
-The public repository starts from a clean snapshot, so this section holds everything since that
-snapshot. It becomes the first tagged release.
+## [0.1.0-alpha.1] - 2026-08-04
+
+The first tagged release. The public repository starts from a clean snapshot, so this section holds
+everything since that snapshot.
+
+It is an alpha because of what
+[known limitations](./docs/known-limitations.md) records rather than because the code is unfinished:
+Windows is the only tested platform, Hook lifecycle capture is not yet verified end to end against a
+live host application, static credential rotation is blocked, and nothing has been through a
+multi-day soak. Read that page before depending on it.
 
 ### Added
 

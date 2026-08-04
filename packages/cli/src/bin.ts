@@ -93,7 +93,10 @@ import {
 import { WindowsManagedBridgeSingleton } from "./windows-managed-bridge-supervisor.js";
 
 const program = new Command();
-program.name("crossagent").description("Local Codex × Claude coordination hub").version("0.1.0");
+program
+  .name("crossagent")
+  .description("Local Codex × Claude coordination hub")
+  .version("0.1.0-alpha.1");
 
 type HookCaptureBindingMode = "required" | "disabled";
 type HistoricalDeliveryProofMode = "required" | "disabled";
